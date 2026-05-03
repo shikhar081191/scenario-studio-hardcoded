@@ -105,7 +105,15 @@ Watch starts with Scenario Studio suggesting relevant market themes/events. The 
 
 Portfolio reveals the story.
 
-Discover starts with Scenario Studio reverse-stressing the selected portfolio. The user chooses a vulnerability to investigate. Scenario Studio shows triggers/watch signals and can route to Watch or scenario building.
+Discover starts with Scenario Studio identifying the factors, themes, and drivers most important to portfolio PnL before any market event is supplied. It should not immediately show plausibility diagnostics or jump directly to scenario creation.
+
+Discover should:
+
+- Highlight factor exposures and driver themes.
+- Ask the user what portfolio PnL drawdown level they are comfortable using as a reverse-stress target.
+- Convert that comfort level into calibration notes: main factors, themes, watch triggers, and driver priorities.
+- Save those calibration notes for later use in Scenario Foundry.
+- Offer routes to monitor the vulnerability, investigate the driver map, or build a scenario using the calibration.
 
 ## Scenario Foundry
 
@@ -118,6 +126,18 @@ Scenario Foundry should be a visible, conversational build process with these st
 5. Shock Simulator
 6. Plausibility & Diagnostics
 7. Portfolio Impact
+
+The chat should narrate that each step ran and ask for human feedback at checkpoints. Large outputs should appear in the live workspace rather than being buried in the chat stream.
+
+## Workspace Layout
+
+Use a three-zone product layout on desktop:
+
+- Slim left context rail, roughly 10-15% width, for portfolio/session status and Foundry stepper.
+- Center conversational rail, roughly 40-50% width, for AI narration, user messages, quick replies, and typed feedback.
+- Right live workspace for tables, factor maps, diagnostics, scenario outputs, and memo/memory artifacts.
+
+The right workspace should be used creatively for current outputs and insights, not as a static portfolio exposure panel.
 
 Factor Selection is one step. Do not split it into Factor Finder, Factor Fetcher, and Factor Selector.
 
@@ -166,26 +186,26 @@ Conceptual framing:
 - Individual factor Z-score = shock / historical scenario-horizon volatility.
 - Scenario-level plausibility is based on joint factor shock extremity, conceptually similar to a Mahalanobis-style distance.
 - A 95th percentile scenario is severe but still inside the selected plausibility envelope.
-- Discover mode can search for the largest portfolio loss subject to the scenario remaining inside the 95% plausibility envelope.
+- Plausibility-constrained reverse stress belongs in Scenario Foundry diagnostics, after the user has supplied a story or Discover calibration target. Discover should first surface themes and PnL comfort calibration.
 
 Diagnostics should include:
 
 - Scenario plausibility cards.
-- Factor shock Z-score heatmap.
+- Compact visual factor shock Z-score matrix, not a scrolling table.
 - Key market factor impact bars for Scenario B.
-- Plausibility vs portfolio impact frontier with the 95% envelope.
+- Plausibility vs portfolio impact frontier with the 95% envelope. All points and labels must stay inside the chart area.
 
 Scenario B should be shown as the largest loss inside the 95% envelope. Scenario C should be shown as a larger loss that breaches the envelope.
 
-## Right Context Panel
+## Live Workspace
 
 Do not show static portfolio exposures throughout the entire experience.
 
-Use the right panel dynamically for:
+Use the right live workspace dynamically for:
 
 - Current risk readout.
 - Current alert focus.
-- Current discovery focus.
+- Discover driver maps and PnL calibration.
 - Scenario Foundry progress.
 - Selected factors.
 - Recommended scenario and impact.
@@ -228,11 +248,11 @@ Revised challenge:
 - Scenario Foundry uses a single Factor Selection step.
 - Human feedback checkpoints appear after historical analogues, Factor Selection, shock selection, diagnostics, and before memo generation.
 - Plausibility & Diagnostics appears after Shock Simulator and before Portfolio Impact.
-- Discover includes plausibility-constrained reverse stress.
+- Discover asks for a portfolio PnL comfort level and produces factor/theme calibration notes before any scenario is built.
 - Scenario B is highlighted as the largest loss inside the 95% plausibility envelope.
 - Scenario C is shown as a larger loss outside the envelope.
-- Factor shock Z-score heatmap, 15-factor impact bars, and plausibility frontier are visible.
+- Compact Z-score matrix, 15-factor impact bars, and plausibility frontier are visible.
 - Challenge & Refine updates both portfolio impact and plausibility diagnostics.
-- Right panel changes based on current state instead of repeating exposures.
+- Three-zone workspace uses a slim left context rail, center chat, and right live results panel.
 - Demo includes cross-portfolio comparison, scenario candidates, challenge, Decision Notes, Client Memo, and Scenario Memory.
 - Works offline and on GitHub Pages.

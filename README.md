@@ -31,17 +31,17 @@ Push the repository to GitHub and enable Pages from **Settings -> Pages** using 
 ## Optional Paths
 
 - **Watch mode**: Scenario Studio suggests market themes and routes the selected alert into scenario building.
-- **Discover mode**: Scenario Studio reverse-stresses the portfolio, asks which vulnerability to investigate, then routes to Watch or scenario building.
+- **Discover mode**: Scenario Studio highlights important PnL drivers, asks for a drawdown comfort level, and saves calibration notes for later scenario building.
 
 ## Key Capabilities Shown
 
 - Quantified portfolio exposures with high / medium / low labels.
 - Factor Selection as a single step: map narrative themes, retrieve candidates, and select the final factor set.
 - Human feedback checkpoints after historical analogues, factor selection, and shock selection.
-- Plausibility & Diagnostics: scenario plausibility cards, factor shock Z-score heatmap, 15-factor impact bars, and a plausibility-vs-impact frontier.
-- Plausibility-constrained reverse stress in Discover mode using a 95% plausibility envelope.
+- Plausibility & Diagnostics: scenario plausibility cards, compact factor shock Z-score visual matrix, 15-factor impact bars, and a plausibility-vs-impact frontier.
+- Discover calibration that feeds later scenario construction without showing plausibility too early.
 - Shock simulation and portfolio impact decomposition.
-- Dynamic context panel that shows current outputs and insights instead of repeating static exposure summaries.
+- Three-zone workspace: slim context rail, conversational chat, and a live results/diagnostics panel.
 - Decision Notes, Client Memo, and Scenario Memory.
 
 ## Technical Notes

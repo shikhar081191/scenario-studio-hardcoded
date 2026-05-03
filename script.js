@@ -163,6 +163,8 @@ const state = {
   quickReplies: [],
   inputMode: null,
   busy: false,
+  livePanel: null,
+  discoverComfort: null,
   scenarioState: {
     source: "—",
     thesis: "Pending",
@@ -290,6 +292,7 @@ function renderWorkspace() {
   const disabled = state.busy ? "disabled" : "";
   return `
     <section class="workspace">
+      ${renderContextPanel()}
       <div class="chat-shell">
         <div class="chat-header">
           <div>
@@ -315,7 +318,7 @@ function renderWorkspace() {
           </div>
         </div>
       </div>
-      ${renderContextPanel()}
+      ${renderLivePanel()}
     </section>`;
 }
 
@@ -337,28 +340,20 @@ function renderTyping() {
 
 // ── Context panel ─────────────────────────────────────────────
 function renderContextPanel() {
-  const p = portfolios[state.selectedPortfolio];
   const showStepper = state.foundryStep > 0
     || ["analyze","challenge","explain","memory"].includes(state.step);
-  const showScenarioState = state.scenarioState.foundry !== "Pending";
-  const snapshot = contextSnapshot();
 
   return `
     <aside class="context-panel">
       <div class="context-section">
-        <div class="context-title">Current context</div>
-        <p style="margin:0 0 3px;font-weight:700;font-size:13px">${state.selectedPortfolio}</p>
-        <p class="muted" style="margin:0;font-size:12px">${snapshot.summary}</p>
-      </div>
-
-      <div class="context-section">
-        <div class="context-title">${snapshot.title}</div>
-        ${snapshot.html}
+        <div class="context-title">Portfolio</div>
+        <p style="margin:0 0 4px;font-weight:800;font-size:13px;line-height:1.25">${state.selectedPortfolio}</p>
+        <p class="muted" style="margin:0;font-size:11px;line-height:1.35">${portfolios[state.selectedPortfolio].vulnerability}</p>
       </div>
 
       ${showStepper ? `
         <div class="context-section">
-          <div class="context-title">Scenario Foundry</div>
+          <div class="context-title">Foundry</div>
           <div class="foundry-stepper">
             ${FOUNDRY_STEPS.map(fs => {
               const done   = state.foundryStep > fs.id;
@@ -377,20 +372,58 @@ function renderContextPanel() {
         </div>` : `
         <div class="context-section">
           <div class="context-title">Key vulnerability</div>
-          <p class="muted" style="margin:0;font-size:12px">${p.vulnerability}</p>
+          <p class="muted" style="margin:0;font-size:12px">${portfolios[state.selectedPortfolio].vulnerability}</p>
         </div>`}
 
-      ${showScenarioState ? `
-        <div class="context-section">
-          <div class="context-title">Scenario state</div>
-          ${Object.entries(state.scenarioState).filter(([k]) => k !== "source" && k !== "thesis").map(([key, val]) => `
-            <div class="state-row">
-              <span style="font-weight:700">${labelize(key)}</span>
-              <span class="badge ${val === "Done" || val === "Saved" ? "green" : val === "Running" ? "blue" : val === "Pending" ? "" : "cyan"}"
-                    style="font-size:10px;padding:2px 6px">${val}</span>
-            </div>`).join("")}
-        </div>` : ""}
+      <div class="context-section">
+        <div class="context-title">Session</div>
+        <div class="rail-stat"><span>Mode</span><strong>${state.currentMode}</strong></div>
+        <div class="rail-stat"><span>Comfort PnL</span><strong>${state.discoverComfort || "Unset"}</strong></div>
+        <div class="rail-stat"><span>Scenario</span><strong>${state.scenarioState.foundry === "Done" ? "Built" : state.scenarioState.foundry}</strong></div>
+      </div>
     </aside>`;
+}
+
+function renderLivePanel() {
+  const fallback = livePanelFallback();
+  return `
+    <aside class="live-panel">
+      <div class="live-panel-header">
+        <div>
+          <div class="context-title">Live Workspace</div>
+          <strong>${livePanelTitle()}</strong>
+        </div>
+        <span class="badge ${modeBadgeClass()}">${state.currentMode}</span>
+      </div>
+      <div class="live-panel-body">
+        ${state.livePanel || fallback}
+      </div>
+    </aside>`;
+}
+
+function setLivePanel(html) {
+  state.livePanel = html;
+  render();
+}
+
+function livePanelTitle() {
+  if (state.currentMode === "Discover") return "Vulnerability calibration";
+  if (state.currentMode === "Watch") return "Alert intelligence";
+  if (state.foundryStep === 6) return "Plausibility diagnostics";
+  if (state.currentMode === "Challenge") return "Assumption impact";
+  if (state.step === "memory") return "Saved scenario trail";
+  return "Portfolio-aware outputs";
+}
+
+function livePanelFallback() {
+  if (state.step === "risk" || state.step === "mode") return exposureSummaryCard();
+  if (state.currentMode === "Watch") return watchEventCards();
+  if (state.currentMode === "Discover") return discoverThemeDashboard();
+  if (state.foundryStep >= 5) return shockMenuCard();
+  return `<div class="empty-live">
+    <strong>Outputs appear here as the analyst works.</strong>
+    <span>Use the chat to steer the session; diagnostics, tables, and scenario artifacts will render in this workspace.</span>
+  </div>`;
 }
 
 // ============================================================
@@ -477,13 +510,15 @@ function startRiskProfile() {
   state.quickReplies = [];
   state.inputMode = null;
   state.foundryStep = 0;
+  state.livePanel = null;
+  state.discoverComfort = null;
   state.busy = true;
   state.scenarioState = { source: "—", thesis: "Pending", foundry: "Pending", challenge: "Pending", notes: "Pending", memo: "Pending", memory: "Pending" };
   render();
 
   sequence([
     () => showTypingThen(`<p>I've loaded <strong>${state.selectedPortfolio}</strong>. Before we choose a mode, I'll summarize the portfolio's risk profile so every scenario we build is grounded in actual exposures.</p>`, 2000),
-    () => showTypingThen(`<p>Here is what stands out.</p>${exposureSummaryCard()}`, 2400),
+    () => showTypingThen(`<p>I've put the exposure readout in the workspace. The headline is clear: rates and credit are doing most of the risk work here.</p>`, 1600).then(() => setLivePanel(exposureSummaryCard())),
     () => showTypingThen(`<p>My initial read: this portfolio is more exposed to <strong>second-order macro spillovers</strong> than to any single market headline. A pure oil shock may be partly offset by energy exposure, but oil becoming a rates-and-credit event is a different story — and that's the bigger risk here.</p>`, 2200),
     () => {
       state.busy = false;
@@ -508,6 +543,7 @@ function enterAsk() {
   state.inputMode = "ask";
   state.busy = false;
   setQuickReplies([]);
+  setLivePanel(askWorkspaceCard());
 
   showTypingThen(
     `<p>What market story, article, or client concern do you want to test against <strong>${state.selectedPortfolio}</strong>? You can type it below or choose a quick start.</p>`,
@@ -530,6 +566,7 @@ function submitAsk(userText) {
   state.busy = true;
 
   addUser(text);
+  setLivePanel(thesisWorkingCard());
 
   showTypingThen(
     `<p>I'll treat this as an oil / inflation / rates story and build it through the Scenario Foundry. First let me extract the market thesis.</p>
@@ -537,7 +574,8 @@ function submitAsk(userText) {
     2400
   ).then(() => {
     state.scenarioState.thesis = "Done";
-    addAI(`${thesisCard()}<p>That is the market thesis. Now I'll run it through <strong>Scenario Foundry</strong> — a structured build that converts this narrative into portfolio-specific factor shocks without jumping from story to arbitrary numbers.</p>`);
+    setLivePanel(thesisCard());
+    addAI(`<p>I extracted the market thesis and mapped the risk channels in the workspace. Now I'll run it through <strong>Scenario Foundry</strong> &mdash; a structured build that converts this narrative into portfolio-specific factor shocks without jumping from story to arbitrary numbers.</p>`);
     state.busy = false;
     setQuickReplies([
       { label: "Run Scenario Foundry", action: "run-foundry", primary: true },
@@ -553,11 +591,10 @@ function comparePortfolios() {
   state.busy = true;
 
   showTypingThen(
-    `<p>Here is how the same event maps across all three portfolios — to show why portfolio context changes the scenario completely.</p>
-     ${crossPortfolioTable()}
-     <p><strong>Same event. Different portfolio. Different scenario relevance.</strong></p>`,
+    `<p>I compared the same story across the portfolio universe. The workspace shows why one generic oil scenario would miss the point.</p>`,
     1800
   ).then(() => {
+    setLivePanel(crossPortfolioTable());
     state.busy = false;
     setQuickReplies([{ label: "Run Scenario Foundry", action: "run-foundry", primary: true }]);
     render();
@@ -574,10 +611,10 @@ function enterWatch() {
   state.inputMode = null;
   state.busy = true;
   setQuickReplies([]);
+  setLivePanel(watchEventCards());
 
   showTypingThen(
-    `<p>I'm watching market themes against <strong>${state.selectedPortfolio}</strong>. Three items currently look relevant to this portfolio's exposures.</p>
-     ${watchEventCards()}
+    `<p>I'm watching market themes against <strong>${state.selectedPortfolio}</strong>. I found three relevant alerts and put the alert center in the workspace.</p>
      <p>Which theme should we investigate?</p>`,
     2200
   ).then(() => {
@@ -603,17 +640,18 @@ function investigateWatch(theme) {
   state.busy = true;
 
   const isMain = theme === "middle-east";
+  setLivePanel(isMain ? watchMappingWorkspace() : watchEventCards());
 
   showTypingThen(
     `${loadingCard(["Reading event signals", "Matching against portfolio vulnerabilities", "Checking Discover watchlist", "Preparing Foundry entry"])}
      <p>${isMain
        ? "This event maps directly to the portfolio's top vulnerability: oil shock spilling into rates and credit. I can build a portfolio-specific scenario from this event."
        : "This theme is material for the portfolio's duration and credit exposures and warrants a full scenario build."}</p>
-     ${isMain ? watchMappingTable() : ""}`,
+     ${isMain ? "" : ""}`,
     2500
   ).then(() => {
     state.busy = false;
-    addAI(`<p>Routing to the Scenario Foundry from Watch alert: <span class="badge cyan">${label}</span></p>`);
+    addAI(`<p>The alert maps cleanly to the portfolio's vulnerability. I can route this into Scenario Foundry from the Watch alert.</p>`);
     setQuickReplies([
       { label: "Build scenario from this alert",    action: "watch-build", primary: true },
       { label: "Show other affected portfolios",    action: "watch-other" }
@@ -628,11 +666,10 @@ function watchOtherPortfolios() {
   state.busy = true;
 
   showTypingThen(
-    `<p>The same event is relevant across all three portfolios, but through materially different channels.</p>
-     ${crossPortfolioTable()}
-     <p><strong>Same event. Different portfolio. Different scenario relevance.</strong></p>`,
+    `<p>I checked the same event across the full portfolio set. The workspace shows the different transmission paths.</p>`,
     1800
   ).then(() => {
+    setLivePanel(crossPortfolioTable());
     state.busy = false;
     setQuickReplies([{ label: "Build scenario for Global Multi-Asset Income", action: "watch-build", primary: true }]);
     render();
@@ -649,26 +686,46 @@ function enterDiscover() {
   state.inputMode = null;
   state.busy = true;
   setQuickReplies([]);
+  setLivePanel(discoverThemeDashboard());
 
   showTypingThen(
-    `<p>I'll reverse-stress <strong>${state.selectedPortfolio}</strong> and look for plausible scenarios that could create material drawdowns &mdash; before you tell me what event you're worried about.</p>
-     ${loadingCard(["Scanning portfolio exposures", "Testing rates, credit, FX and commodity channels", "Ranking plausible drawdown paths", "Preparing vulnerability map"])}`,
+    `<p>I'll start portfolio-first. No market event yet &mdash; just the portfolio telling us which themes and drivers matter most.</p>
+     ${loadingCard(["Scanning exposure concentrations", "Linking factors to loss drivers", "Ranking risk themes", "Preparing calibration question"])}`,
     2800
   ).then(() =>
     showTypingThen(
-      `<p>Here is the plausibility-constrained reverse stress I would run for this portfolio.</p>
-       ${discoverPlausibilityReverseStress()}
-       <p><strong>Credit Risk-Off creates the larger loss, but it sits outside the 95% plausibility envelope. Within the 95% envelope, Stagflation Repricing is the most damaging plausible scenario.</strong></p>
-       <p>Which vulnerability should we investigate?</p>`,
-      2200
+      `<p>I found the portfolio's main vulnerability themes and placed the diagnostic map in the workspace.</p>
+       <p>Before we create any scenario, what drawdown level would you be comfortable using as a reverse-stress target?</p>`,
+      1800
     )
   ).then(() => {
     state.busy = false;
     setQuickReplies([
-      { label: "Oil + rates + credit stagflation", action: "discover-oil",      primary: true },
-      { label: "Credit-led risk-off",              action: "discover-credit" },
-      { label: "Rates bear steepening",            action: "discover-rates" },
-      { label: "Pure oil shock",                   action: "discover-pure-oil" }
+      { label: "Comfort level: -3%", action: "discover-comfort-3" },
+      { label: "Comfort level: -4%", action: "discover-comfort-4", primary: true },
+      { label: "Comfort level: -5%", action: "discover-comfort-5" }
+    ]);
+    render();
+  });
+}
+
+function setDiscoverComfort(level) {
+  setQuickReplies([]);
+  state.discoverComfort = level;
+  addUser(`Use ${level} as the reverse-stress comfort level.`);
+  state.busy = true;
+  setLivePanel(discoverCalibrationWorkspace(level));
+
+  showTypingThen(
+    `<p>Got it. I used <strong>${level}</strong> as the PnL calibration target and identified the factor themes most likely to matter.</p>
+     <p>This is still a discovery output, not a final scenario. We can monitor the themes, or carry this calibration into Foundry when a story arrives.</p>`,
+    1900
+  ).then(() => {
+    state.busy = false;
+    setQuickReplies([
+      { label: "Monitor oil + rates + credit", action: "discover-save", primary: true },
+      { label: "Investigate the driver map", action: "discover-oil" },
+      { label: "Build scenario using this calibration", action: "discover-build" }
     ]);
     render();
   });
@@ -689,14 +746,15 @@ function investigateDiscover(label) {
   const isMain = label === "oil";
 
   showTypingThen(
-    `${loadingCard(["Expanding vulnerability path", "Identifying trigger events", "Matching to current market themes", "Preparing Foundry entry"])}
+    `${loadingCard(["Expanding driver path", "Identifying trigger events", "Mapping to watch signals", "Saving calibration notes"])}
      <p>${isMain
-       ? "Good choice. This is the portfolio's most material vulnerability: an oil shock that becomes a stagflation event through rates and credit channels."
-       : `I'll build a full scenario around this vulnerability.`}</p>`,
+       ? "Good choice. This is the portfolio's most material driver cluster: oil only matters when it pulls inflation, rates, and credit with it."
+       : `I'll expand this driver cluster and keep it available for calibration later.`}</p>`,
     2400
   ).then(() => {
     state.busy = false;
-    addAI(`<p>Routing to the Scenario Foundry from Discover vulnerability: <span class="badge purple">${title}</span></p>`);
+    setLivePanel(discoverCalibrationWorkspace(state.discoverComfort || "-4%"));
+    addAI(`<p>I saved the driver map. We can monitor it, or use it as calibration input when building a scenario.</p>`);
     setQuickReplies([
       { label: "Build scenario from this vulnerability", action: "discover-build", primary: true },
       { label: "Save vulnerability to watchlist",        action: "discover-save" }
@@ -717,6 +775,7 @@ function runFoundry(sourceLabel) {
   state.busy = true;
   state.foundryStep = 0;
   setQuickReplies([]);
+  setLivePanel(foundryWorkspaceIntro(sourceLabel));
 
   addAI(`<p>Running the <strong>Scenario Foundry</strong>${sourceLabel ? ` from <em>${sourceLabel}</em>` : ""}. I'll work through the build and pause at key checkpoints for your feedback.</p>`);
   render();
@@ -826,6 +885,7 @@ function continueAfterHistorical(feedback) {
 
 function foundryFactorFeedback() {
   state.busy = false;
+  setLivePanel(factorSelectionCard());
   setQuickReplies([
     { label: "Factor set looks complete", action: "foundry-factor-ok", primary: true },
     { label: "Add oil volatility as a candidate", action: "foundry-factor-add" }
@@ -846,6 +906,7 @@ function continueAfterFactors(feedback) {
 
 function foundryShockFeedback() {
   state.busy = false;
+  setLivePanel(shockMenuCard());
   setQuickReplies([
     { label: "Review diagnostics", action: "foundry-diagnostics", primary: true },
     { label: "Continue to portfolio impact", action: "foundry-impact" },
@@ -890,6 +951,7 @@ function foundryDiagnosticsStep() {
 
 function foundryDiagnosticsFeedback() {
   state.busy = false;
+  setLivePanel(foundryDiagnosticsWorkspace());
   setQuickReplies([
     { label: "Continue to portfolio impact", action: "foundry-impact", primary: true },
     { label: "Adjust shocks before impact", action: "foundry-shocks-adjust" }
@@ -980,6 +1042,7 @@ function foundryStep8() {
 
 function foundryDone() {
   setFS(8);
+  setLivePanel(impactDecompositionCard());
   state.scenarioState.foundry = "Done";
   state.busy = false;
   state.step = "challenge";
@@ -1025,6 +1088,7 @@ function submitChallenge(userText) {
   const text = userText || "What if oil rises 50% instead of 35%, but credit spreads widen less?";
   addUser(text);
   state.busy = true;
+  setLivePanel(challengeWorkspaceCard());
 
   showTypingThen(
     `<p>Updating Scenario B. A larger oil shock increases inflation pressure and rates impact, but lower credit widening reduces spread losses. The portfolio's partial energy offset means the incremental oil move is partly mitigated. Net loss is still driven mainly by duration and credit.</p>
@@ -1048,6 +1112,7 @@ function reviewUpdatedPlausibility() {
   setQuickReplies([]);
   addUser("Review updated plausibility.");
   state.busy = true;
+  setLivePanel(challengeWorkspaceCard());
   showTypingThen(
     `${challengeDiagnosticsCard()}<p>The revised scenario stays inside the 95% plausibility envelope. The oil shock is more extreme, but lower credit contagion reduces joint scenario extremity.</p>`,
     1600
@@ -1293,7 +1358,7 @@ function vulnerabilityTable() {
   </div>`;
 }
 
-function discoverPlausibilityReverseStress() {
+function legacyDiscoverPlausibilityReverseStress() {
   return `<div class="ai-card diagnostics-card">
     <h3 style="margin-bottom:8px">Plausibility-constrained reverse stress</h3>
     ${plausibilityNote()}
@@ -1390,6 +1455,66 @@ function frontierPlot() {
       <div class="axis x">Scenario extremity / plausibility percentile →</div>
       <div class="axis y">Portfolio loss ↑</div>
     </div>
+  </div>`;
+}
+
+function zScoreHeatmap() {
+  const maxAbs = 3;
+  return `<div class="z-visual">
+    <div class="z-legend">
+      <span><i class="z-low"></i>|z| &lt; 1</span>
+      <span><i class="z-medium"></i>1-2</span>
+      <span><i class="z-high"></i>2-3</span>
+      <span><i class="z-extreme"></i>3+</span>
+    </div>
+    <div class="z-visual-head"><span>Factor</span><span>A</span><span>B</span><span>C</span></div>
+    ${FACTOR_UNIVERSE.map(factor => `
+      <div class="z-visual-row">
+        <strong>${factor}</strong>
+        ${["A","B","C"].map(k => {
+          const [shock, z] = SCENARIO_DIAGNOSTICS[k].factors[factor];
+          const mag = Math.max(18, Math.min(100, Math.abs(z) / maxAbs * 100));
+          return `<div class="z-dot-cell ${zClass(z)}" title="${factor} ${SCENARIO_DIAGNOSTICS[k].shortName}: ${shock}, z ${z > 0 ? "+" : ""}${z.toFixed(1)}">
+            <span style="--size:${mag}%"></span>
+            <em>${shock}<br>z ${z > 0 ? "+" : ""}${z.toFixed(1)}</em>
+          </div>`;
+        }).join("")}
+      </div>
+    `).join("")}
+  </div>`;
+}
+
+function frontierPlot() {
+  const toX = (percentile) => 44 + ((percentile - 65) / 35) * 456;
+  const toY = (loss) => 246 - (Math.abs(loss) / 5) * 196;
+  const points = [
+    { key: "A", p: 72, loss: -0.8, label: "A", note: "Contained oil shock", cls: "" },
+    { key: "B", p: 94, loss: -3.7, label: "B", note: "Largest inside 95%", cls: "best" },
+    { key: "C", p: 98, loss: -4.5, label: "C", note: "Outside envelope", cls: "outside" }
+  ];
+  return `<div class="frontier-card">
+    <div class="frontier-title">
+      <strong>Plausibility vs portfolio impact frontier</strong>
+      <span>95% envelope</span>
+    </div>
+    <svg class="frontier-svg" viewBox="0 0 560 310" role="img" aria-label="Plausibility versus portfolio impact frontier">
+      <rect x="44" y="28" width="456" height="218" rx="8" fill="#f8fbff" stroke="#d9e2ef"></rect>
+      <rect x="${toX(95)}" y="28" width="${500 - toX(95)}" height="218" fill="rgba(193,63,58,0.08)"></rect>
+      <line x1="${toX(95)}" y1="28" x2="${toX(95)}" y2="246" stroke="#c13f3a" stroke-width="2" stroke-dasharray="5 5"></line>
+      ${[70,80,90,100].map(t => `<line x1="${toX(t)}" y1="28" x2="${toX(t)}" y2="246" stroke="#e6edf5"></line><text x="${toX(t)}" y="268" text-anchor="middle">${t}</text>`).join("")}
+      ${[1,2,3,4,5].map(t => `<line x1="44" y1="${toY(-t)}" x2="500" y2="${toY(-t)}" stroke="#e6edf5"></line><text x="28" y="${toY(-t)+4}" text-anchor="middle">-${t}%</text>`).join("")}
+      <text x="272" y="296" text-anchor="middle">Scenario extremity percentile</text>
+      <text x="14" y="136" transform="rotate(-90 14 136)" text-anchor="middle">Portfolio loss</text>
+      <text x="${toX(95)+7}" y="43" fill="#a73532" font-weight="800">95%</text>
+      <polyline points="${points.map(p => `${toX(p.p)},${toY(p.loss)}`).join(" ")}" fill="none" stroke="#9fb3cf" stroke-width="2"></polyline>
+      ${points.map(p => `
+        <g class="svg-point ${p.cls}" transform="translate(${toX(p.p)},${toY(p.loss)})">
+          <circle r="${p.key === "B" ? 13 : 11}"></circle>
+          <text y="4" text-anchor="middle">${p.label}</text>
+        </g>
+        <text class="frontier-label ${p.cls}" x="${p.key === "C" ? toX(p.p)-8 : toX(p.p)+16}" y="${toY(p.loss)-8}" text-anchor="${p.key === "C" ? "end" : "start"}">${p.note}</text>
+      `).join("")}
+    </svg>
   </div>`;
 }
 
@@ -1559,6 +1684,179 @@ function memoryCard() {
   </div>`;
 }
 
+function askWorkspaceCard() {
+  return `<div class="workspace-card">
+    <h3>Ask Mode workspace</h3>
+    <p class="muted">User brings the story. The analyst will extract the thesis, map channels, and build portfolio-aware scenarios.</p>
+    <div class="prompt-preview">
+      <strong>Ready for:</strong>
+      <span>Article paste</span>
+      <span>Client concern</span>
+      <span>Market question</span>
+    </div>
+  </div>`;
+}
+
+function thesisWorkingCard() {
+  return `<div class="workspace-card">
+    <h3>Extracting thesis</h3>
+    ${loadingCard(["Parsing narrative", "Separating headline from transmission", "Checking portfolio exposure map"])}
+  </div>`;
+}
+
+function watchMappingWorkspace() {
+  return `<div class="workspace-card">
+    <h3>Alert relevance map</h3>
+    ${watchMappingTable()}
+    <p class="insight-note">This is Watch's job: the system brings the story, then explains why it matters for this portfolio before any scenario is built.</p>
+  </div>`;
+}
+
+function foundryWorkspaceIntro(sourceLabel) {
+  return `<div class="workspace-card">
+    <h3>Scenario Foundry input</h3>
+    <div class="metric-strip">
+      <div><span>Source</span><strong>${sourceLabel || "User concern"}</strong></div>
+      <div><span>Portfolio</span><strong>${state.selectedPortfolio}</strong></div>
+      <div><span>Calibration hint</span><strong>${state.discoverComfort || "None"}</strong></div>
+    </div>
+    <p class="muted">The Foundry will convert the story into factors, shocks, diagnostics, impact, and reusable notes.</p>
+  </div>`;
+}
+
+function factorSelectionCard() {
+  return `<div class="workspace-card">
+    <h3>Factor Selection</h3>
+    ${tbl(["Theme","Candidate factors considered","Selected factor","Why selected"],[
+      ["Oil supply shock", "Brent, WTI, energy equity sector", "Brent crude", "Closest liquid proxy for global supply shock"],
+      ["Inflation repricing", "US 5Y breakeven, US 10Y breakeven", "US 5Y breakeven", "Medium-term inflation channel"],
+      ["Fed / rates", "US 2Y, US 5Y, US 10Y yields", "US 5Y yield", "Delayed cuts + portfolio duration relevance"],
+      ["Credit risk-off", "CDX IG, CDX HY, IG OAS, HY OAS", "CDX HY", "Higher-beta credit channel"],
+      ["EM stress", "EM FX basket, EM local rates, EMBI", "EM FX basket", "Captures USD/risk-off spillover"],
+      ["Equity risk sentiment", "S&amp;P 500, MSCI World, VIX", "S&amp;P 500", "Broad equity drawdown proxy"]
+    ])}
+    <div class="rejected-box">
+      <strong>Rejected or lower-priority candidates</strong>
+      <ul>
+        <li>WTI crude &mdash; redundant with Brent for this scenario</li>
+        <li>Defence equities &mdash; thematic but less central to portfolio risk</li>
+        <li>Shipping rates &mdash; relevant but not a core modeled factor here</li>
+        <li>Long-end breakevens &mdash; weaker fit for policy-repricing channel</li>
+      </ul>
+    </div>
+  </div>`;
+}
+
+function shockMenuCard() {
+  return `<div class="workspace-card">
+    <h3>Scenario shock menu</h3>
+    ${tbl(["Scenario","Logic","Key shocks","Est. impact"],[
+      ["A &mdash; Contained Oil Shock", "Oil rises, inflation / rates response contained", "Brent +20%, 5Y +15bp, CDX HY +25bp, S&amp;P &minus;2%", "<span class='badge green'>&minus;0.8%</span>"],
+      ["B &mdash; Stagflation Repricing", "Oil feeds inflation, Fed delayed, credit weakens", "Brent +35%, BEI +35bp, 5Y +60bp, CDX HY +90bp, S&amp;P &minus;7%", "<span class='badge red'>&minus;3.7%</span>"],
+      ["C &mdash; Credit Risk-Off", "Geopolitical risk spills into broader market risk-off", "Brent +20%, CDX HY +140bp, EM FX &minus;5%, S&amp;P &minus;10%", "<span class='badge red'>&minus;4.5%</span>"]
+    ])}
+    <div class="rec-box"><strong>Recommendation:</strong> Scenario B best matches the catalyst path and the portfolio's top vulnerability.</div>
+  </div>`;
+}
+
+function impactDecompositionCard() {
+  return `<div class="workspace-card">
+    <h3>Scenario B &mdash; Impact decomposition</h3>
+    ${tbl(["Driver","Contribution","Note"],[
+      ["Duration / rates", "<span class='impact'>&minus;1.4%</span>", "Long duration; US 5Y yield +60bp is the primary hurt"],
+      ["Credit spreads", "<span class='impact'>&minus;1.5%</span>", "High IG / HY beta; CDX HY +90bp"],
+      ["EM FX risk-off", "<span class='impact'>&minus;0.5%</span>", "Moderate EM FX exposure; USD stronger"],
+      ["Equity drawdown", "<span class='impact'>&minus;0.6%</span>", "Equity risk component; S&amp;P &minus;7%"],
+      ["Energy equity offset", "<span class='positive'>+0.3%</span>", "Small energy position partly offsets the oil shock"],
+      ["Inflation-linked hedge", "<span class='muted'>~0.0%</span>", "Modest hedge; not enough to offset the rates move"],
+      ["<strong>Total</strong>", "<span class='impact'><strong>&minus;3.7%</strong></span>", "Driven by rates + credit, not oil itself"]
+    ])}
+    <p class="insight-note">The portfolio is not mainly hurt by oil. It is hurt by the rates and credit repricing that follows the oil shock.</p>
+  </div>`;
+}
+
+function foundryDiagnosticsWorkspace() {
+  return `<div class="workspace-card diagnostics-card">
+    <h3>Plausibility & Diagnostics</h3>
+    ${plausibilityNote()}
+    ${plausibilityCards()}
+    ${frontierPlot()}
+    <h4>Factor shock Z-score map</h4>
+    ${zScoreHeatmap()}
+    <h4>Scenario B market factor impacts</h4>
+    ${factorImpactBars("B")}
+    <p class="insight-note">Scenario B is the largest portfolio loss inside the 95% envelope. Scenario C creates a larger loss, but sits outside the envelope.</p>
+  </div>`;
+}
+
+function challengeWorkspaceCard() {
+  return `<div class="workspace-card">
+    ${assumptionTable()}
+    ${challengeDiagnosticsCard()}
+  </div>`;
+}
+
+function discoverThemeDashboard() {
+  return `<div class="workspace-card discover-map">
+    <h3>Portfolio vulnerability map</h3>
+    <p class="muted">Discover starts without a market story. It highlights drivers that can move portfolio PnL and asks for a drawdown comfort level before calibration.</p>
+    <div class="driver-grid">
+      ${driverTile("Rates repricing", "6.8y duration", "High", 88, "US 2Y / 5Y / 10Y yields")}
+      ${driverTile("Credit widening", "42% NAV spread beta", "High", 86, "CDX IG / CDX HY")}
+      ${driverTile("Oil-inflation pass-through", "4% energy offset vs 7% inflation hedge", "Medium", 62, "Brent, breakevens")}
+      ${driverTile("USD / EM FX stress", "11% unhedged EM FX", "Medium", 58, "USD index, EM FX basket")}
+    </div>
+    <div class="theme-ladder">
+      <strong>Important theme cluster</strong>
+      <span>Oil shock becomes inflation repricing</span>
+      <span>Inflation repricing delays Fed cuts</span>
+      <span>Rates sell off and credit spreads widen</span>
+      <span>USD strength adds EM FX pressure</span>
+    </div>
+  </div>`;
+}
+
+function discoverCalibrationWorkspace(level) {
+  return `<div class="workspace-card discover-map">
+    <h3>Reverse-stress calibration target</h3>
+    <div class="metric-strip">
+      <div><span>Comfort PnL</span><strong>${level}</strong></div>
+      <div><span>Primary driver</span><strong>Rates + credit</strong></div>
+      <div><span>Oil role</span><strong>Catalyst, not main loss</strong></div>
+    </div>
+    <div class="calibration-board">
+      <div>
+        <h4>Main factors to calibrate later</h4>
+        <ul>
+          <li>Brent crude and US 5Y breakevens for inflation impulse</li>
+          <li>US 5Y yield for delayed-cut repricing</li>
+          <li>CDX HY for credit beta and funding stress</li>
+          <li>EM FX basket and USD index for spillover pressure</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Watch signals</h4>
+        <ul>
+          <li>Brent risk premium persists beyond the initial shock</li>
+          <li>Breakevens widen while nominal yields rise</li>
+          <li>HY spreads widen despite energy equity support</li>
+          <li>USD strength transmits into EM FX drawdown</li>
+        </ul>
+      </div>
+    </div>
+    <p class="insight-note">This calibration note will be reused later in Scenario Foundry when converting a story into shocks.</p>
+  </div>`;
+}
+
+function driverTile(name, value, label, width, factors) {
+  return `<div class="driver-tile">
+    <div><strong>${name}</strong><span class="badge ${width > 80 ? "red" : "yellow"}">${label}</span></div>
+    <p>${value}</p>
+    <div class="bar"><span style="--w:${width}%"></span></div>
+    <small>${factors}</small>
+  </div>`;
+}
+
 function tbl(headers, rows) {
   return `<div class="table-wrap">
     <table>
@@ -1604,11 +1902,14 @@ function handleReply(action) {
     "watch-other":       watchOtherPortfolios,
     "watch-build":    () => { addUser("Yes, build a scenario from this alert."); runFoundry("Watch alert: Middle East escalation"); },
     "watch-save":     () => showTypingThen(`<p>Saved to the portfolio watchlist. I'll keep monitoring for changes to this event's severity.</p>`, 1200),
+    "discover-comfort-3": () => setDiscoverComfort("-3%"),
+    "discover-comfort-4": () => setDiscoverComfort("-4%"),
+    "discover-comfort-5": () => setDiscoverComfort("-5%"),
     "discover-oil":      () => investigateDiscover("oil"),
     "discover-credit":   () => investigateDiscover("credit"),
     "discover-rates":    () => investigateDiscover("rates"),
     "discover-pure-oil": () => investigateDiscover("pure-oil"),
-    "discover-build": () => { addUser("Build a scenario from this vulnerability."); runFoundry("Discover vulnerability: Oil + rates + credit stagflation"); },
+    "discover-build": () => { addUser("Build a scenario using the Discover calibration."); runFoundry(`Discover calibration: ${state.discoverComfort || "-4%"} PnL target, oil + rates + credit drivers`); },
     "discover-save":  () => showTypingThen(`<p>Saved this vulnerability to the portfolio monitor. I'll keep it linked to oil, inflation, rates, credit, and USD/EM FX triggers.</p>`, 1200),
     "restart":        restart,
     "mode-selection": startRiskProfile
