@@ -198,11 +198,12 @@ const CHAT_SCROLL_DURATION = 2600;
 const NOTEBOOK_SCROLL_DURATION = 1800;
 const SCROLL_JUST_NOTICEABLE = 140;
 const activeScrolls = new WeakMap();
+let nextChatPosition = "preserve";
 
 function showTypingThen(html, delay) {
+  requestChatPosition(isChatNearBottom() ? "bottom" : "preserve");
   state.typing = true;
   render();
-  gentleFollowChat();
   const requestedDelay = delay || 1800;
   const pacedDelay = Math.max(MIN_THINKING_DELAY, Math.round(requestedDelay * THINKING_DELAY_MULTIPLIER));
   return sleep(pacedDelay).then(() => {
@@ -220,17 +221,17 @@ function sequence(fns) {
 // ============================================================
 
 function addAI(html) {
+  requestChatPosition(isChatNearBottom() ? "bottom" : "preserve");
   state.messages.push({ role: "ai", html });
   render();
-  scrollChat();
 }
 
 function addUser(text) {
   // sanitize only < and > to prevent injected tags; entities render fine
+  requestChatPosition(isChatNearBottom() ? "bottom" : "preserve");
   const safe = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   state.messages.push({ role: "user", html: safe });
   render();
-  scrollChat();
 }
 
 function setQuickReplies(replies) {
@@ -242,6 +243,9 @@ function setQuickReplies(replies) {
 // ============================================================
 
 function render() {
+  const chatBefore = document.getElementById("chatBody");
+  const previousChatTop = chatBefore ? chatBefore.scrollTop : 0;
+
   portfolioLabel.textContent = state.selectedPortfolio || "Not selected";
   modeLabel.textContent      = state.currentMode       || "Setup";
   updateProgress();
@@ -251,6 +255,7 @@ function render() {
   else                                 root.innerHTML = renderWorkspace();
 
   bindEvents();
+  restoreChatPosition(previousChatTop);
 }
 
 // ── Landing ──────────────────────────────────────────────────
@@ -2110,6 +2115,29 @@ function scrollChat() {
     if (!el) return;
     slowScrollTo(el, el.scrollHeight, CHAT_SCROLL_DURATION);
   }, 120);
+}
+
+function requestChatPosition(mode) {
+  nextChatPosition = mode;
+}
+
+function restoreChatPosition(previousTop) {
+  const el = document.getElementById("chatBody");
+  if (!el) return;
+
+  const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
+  if (nextChatPosition === "bottom") {
+    el.scrollTop = maxTop;
+  } else {
+    el.scrollTop = Math.min(previousTop || 0, maxTop);
+  }
+  nextChatPosition = "preserve";
+}
+
+function isChatNearBottom() {
+  const el = document.getElementById("chatBody");
+  if (!el) return true;
+  return el.scrollHeight - el.clientHeight - el.scrollTop < 260;
 }
 
 function gentleFollowChat() {
