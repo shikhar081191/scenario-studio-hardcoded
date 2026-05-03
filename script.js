@@ -194,13 +194,15 @@ const brandButton      = document.getElementById("brandButton");
 const sleep = (ms) => new Promise((r) => window.setTimeout(r, ms));
 const THINKING_DELAY_MULTIPLIER = 1.35;
 const MIN_THINKING_DELAY = 1700;
-const CHAT_SCROLL_DURATION = 950;
-const NOTEBOOK_SCROLL_DURATION = 1150;
+const CHAT_SCROLL_DURATION = 2600;
+const NOTEBOOK_SCROLL_DURATION = 1800;
+const SCROLL_JUST_NOTICEABLE = 140;
+const activeScrolls = new WeakMap();
 
 function showTypingThen(html, delay) {
   state.typing = true;
   render();
-  scrollChat();
+  gentleFollowChat();
   const requestedDelay = delay || 1800;
   const pacedDelay = Math.max(MIN_THINKING_DELAY, Math.round(requestedDelay * THINKING_DELAY_MULTIPLIER));
   return sleep(pacedDelay).then(() => {
@@ -249,10 +251,6 @@ function render() {
   else                                 root.innerHTML = renderWorkspace();
 
   bindEvents();
-  if (state.view === "workspace") {
-    scrollChat();
-    if (state.liveSections.length) scrollLiveWorkspace("active");
-  }
 }
 
 // ── Landing ──────────────────────────────────────────────────
@@ -436,10 +434,10 @@ function resetLiveNotebook(title, html, meta) {
 function addLiveSection(title, html, meta) {
   state.livePanel = null;
   const id = uniqueId("section");
-  state.liveSections.push({ id, title, meta: meta || "Output", html });
+  state.liveSections.unshift({ id, title, meta: meta || "Output", html });
   state.activeSectionId = id;
   render();
-  scrollLiveWorkspace("active");
+  scrollLiveWorkspace("top");
 }
 
 function renderLiveNotebook() {
@@ -2114,6 +2112,17 @@ function scrollChat() {
   }, 120);
 }
 
+function gentleFollowChat() {
+  window.setTimeout(() => {
+    const el = document.getElementById("chatBody");
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.clientHeight - el.scrollTop;
+    if (distanceFromBottom < 220) {
+      slowScrollTo(el, el.scrollHeight, CHAT_SCROLL_DURATION);
+    }
+  }, 160);
+}
+
 function scrollLiveWorkspace(target) {
   window.setTimeout(() => {
     const body = document.querySelector(".live-panel-body");
@@ -2138,17 +2147,30 @@ function slowScrollTo(element, targetTop, duration) {
   const distance = target - start;
   if (Math.abs(distance) < 2) return;
 
+  const previous = activeScrolls.get(element);
+  if (previous) cancelAnimationFrame(previous);
+
+  if (Math.abs(distance) < SCROLL_JUST_NOTICEABLE) {
+    element.scrollTop = target;
+    return;
+  }
+
   const startTime = performance.now();
-  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  const adjustedDuration = Math.min(4200, duration + Math.min(1400, Math.abs(distance) * 1.25));
+  const ease = (t) => 0.5 - Math.cos(Math.PI * t) / 2;
 
   function step(now) {
     const elapsed = now - startTime;
-    const progress = Math.min(1, elapsed / duration);
+    const progress = Math.min(1, elapsed / adjustedDuration);
     element.scrollTop = start + distance * ease(progress);
-    if (progress < 1) requestAnimationFrame(step);
+    if (progress < 1) {
+      activeScrolls.set(element, requestAnimationFrame(step));
+    } else {
+      activeScrolls.delete(element);
+    }
   }
 
-  requestAnimationFrame(step);
+  activeScrolls.set(element, requestAnimationFrame(step));
 }
 
 // ============================================================
