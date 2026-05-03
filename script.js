@@ -192,12 +192,18 @@ const brandButton      = document.getElementById("brandButton");
 // ============================================================
 
 const sleep = (ms) => new Promise((r) => window.setTimeout(r, ms));
+const THINKING_DELAY_MULTIPLIER = 1.35;
+const MIN_THINKING_DELAY = 1700;
+const CHAT_SCROLL_DURATION = 950;
+const NOTEBOOK_SCROLL_DURATION = 1150;
 
 function showTypingThen(html, delay) {
   state.typing = true;
   render();
   scrollChat();
-  return sleep(delay || 1800).then(() => {
+  const requestedDelay = delay || 1800;
+  const pacedDelay = Math.max(MIN_THINKING_DELAY, Math.round(requestedDelay * THINKING_DELAY_MULTIPLIER));
+  return sleep(pacedDelay).then(() => {
     state.typing = false;
     addAI(html);
   });
@@ -2104,8 +2110,8 @@ function scrollChat() {
   window.setTimeout(() => {
     const el = document.getElementById("chatBody");
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, 60);
+    slowScrollTo(el, el.scrollHeight, CHAT_SCROLL_DURATION);
+  }, 120);
 }
 
 function scrollLiveWorkspace(target) {
@@ -2114,15 +2120,35 @@ function scrollLiveWorkspace(target) {
     if (!body) return;
 
     if (target === "top") {
-      body.scrollTo({ top: 0, behavior: "smooth" });
+      slowScrollTo(body, 0, NOTEBOOK_SCROLL_DURATION);
       return;
     }
 
     const active = body.querySelector(".live-section[open]");
     if (!active) return;
     const nextTop = Math.max(0, active.offsetTop - body.offsetTop - 8);
-    body.scrollTo({ top: nextTop, behavior: "smooth" });
-  }, 80);
+    slowScrollTo(body, nextTop, NOTEBOOK_SCROLL_DURATION);
+  }, 140);
+}
+
+function slowScrollTo(element, targetTop, duration) {
+  const maxTop = Math.max(0, element.scrollHeight - element.clientHeight);
+  const target = Math.max(0, Math.min(targetTop, maxTop));
+  const start = element.scrollTop;
+  const distance = target - start;
+  if (Math.abs(distance) < 2) return;
+
+  const startTime = performance.now();
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / duration);
+    element.scrollTop = start + distance * ease(progress);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
 }
 
 // ============================================================
