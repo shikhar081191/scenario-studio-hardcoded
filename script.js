@@ -201,7 +201,6 @@ const activeScrolls = new WeakMap();
 let nextChatPosition = "preserve";
 
 function showTypingThen(html, delay) {
-  requestChatPosition(isChatNearBottom() ? "bottom" : "preserve");
   state.typing = true;
   render();
   const requestedDelay = delay || 1800;
@@ -243,19 +242,16 @@ function setQuickReplies(replies) {
 // ============================================================
 
 function render() {
-  const chatBefore = document.getElementById("chatBody");
-  const previousChatTop = chatBefore ? chatBefore.scrollTop : 0;
-
   portfolioLabel.textContent = state.selectedPortfolio || "Not selected";
   modeLabel.textContent      = state.currentMode       || "Setup";
   updateProgress();
 
   if      (state.view === "landing")   root.innerHTML = renderLanding();
   else if (state.view === "portfolio") root.innerHTML = renderPortfolioSelection();
-  else                                 root.innerHTML = renderWorkspace();
+  else if (root.querySelector(".workspace")) patchWorkspace();
+  else root.innerHTML = renderWorkspace();
 
   bindEvents();
-  restoreChatPosition(previousChatTop);
 }
 
 // ── Landing ──────────────────────────────────────────────────
@@ -335,6 +331,56 @@ function renderWorkspace() {
       </div>
       ${renderLivePanel()}
     </section>`;
+}
+
+function patchWorkspace() {
+  const disabled = state.busy ? "disabled" : "";
+
+  const chatHeader = root.querySelector(".chat-header");
+  if (chatHeader) {
+    chatHeader.innerHTML = `
+      <div>
+        <strong>Scenario Studio Analyst</strong>
+        <small class="muted">${headerSubtitle()}</small>
+      </div>
+      <span class="badge ${modeBadgeClass()}">${state.currentMode}</span>`;
+  }
+
+  const chatBody = document.getElementById("chatBody");
+  if (chatBody) {
+    const wasNearBottom = isChatNearBottom();
+    const previousTop = chatBody.scrollTop;
+    chatBody.innerHTML = `
+      ${state.messages.map(renderMessage).join("")}
+      ${state.typing ? renderTyping() : ""}`;
+    if (nextChatPosition === "bottom" || wasNearBottom) {
+      chatBody.scrollTop = Math.max(0, chatBody.scrollHeight - chatBody.clientHeight);
+    } else {
+      chatBody.scrollTop = Math.min(previousTop, Math.max(0, chatBody.scrollHeight - chatBody.clientHeight));
+    }
+    nextChatPosition = "preserve";
+  }
+
+  const chatFooter = root.querySelector(".chat-footer");
+  if (chatFooter) {
+    chatFooter.innerHTML = `
+      ${state.quickReplies.length ? `
+        <div class="quick-replies">
+          ${state.quickReplies.map(q =>
+            `<button class="quick ${q.primary ? "primary" : ""}" data-reply="${q.action}" ${disabled}>${q.label}</button>`
+          ).join("")}
+        </div>` : ""}
+      <div class="chat-input" style="margin-top:${state.quickReplies.length ? "10px" : "0"}">
+        <input class="input" id="chatInput" placeholder="${inputPlaceholder()}" ${disabled}>
+        <button class="button primary" data-action="send-input" ${disabled}>Send</button>
+      </div>`;
+  }
+
+  const contextPanel = root.querySelector(".context-panel");
+  if (contextPanel) contextPanel.outerHTML = renderContextPanel();
+
+  const livePanel = root.querySelector(".live-panel");
+  if (livePanel) livePanel.outerHTML = renderLivePanel();
 }
 
 function renderMessage(msg) {
