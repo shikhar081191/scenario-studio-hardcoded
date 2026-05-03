@@ -41,7 +41,8 @@ Push the repository to GitHub and enable Pages from **Settings -> Pages** using 
 - Plausibility & Diagnostics: scenario plausibility cards, compact factor shock Z-score visual matrix, 15-factor impact bars, and a plausibility-vs-impact frontier.
 - Discover calibration that feeds later scenario construction without showing plausibility too early.
 - Shock simulation and portfolio impact decomposition.
-- Three-zone workspace: slim context rail, conversational chat, and a live results/diagnostics panel.
+- Three-zone workspace: slim context rail, conversational chat, and a live results/diagnostics notebook.
+- Outputs accumulate in the live notebook as collapsible sections, so the chat stays focused on narration and human checkpoints.
 - Decision Notes, Client Memo, and Scenario Memory.
 
 ## Technical Notes

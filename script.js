@@ -164,6 +164,8 @@ const state = {
   inputMode: null,
   busy: false,
   livePanel: null,
+  liveSections: [],
+  activeSectionId: null,
   discoverComfort: null,
   scenarioState: {
     source: "—",
@@ -385,7 +387,6 @@ function renderContextPanel() {
 }
 
 function renderLivePanel() {
-  const fallback = livePanelFallback();
   return `
     <aside class="live-panel">
       <div class="live-panel-header">
@@ -396,14 +397,58 @@ function renderLivePanel() {
         <span class="badge ${modeBadgeClass()}">${state.currentMode}</span>
       </div>
       <div class="live-panel-body">
-        ${state.livePanel || fallback}
+        ${renderLiveNotebook()}
       </div>
     </aside>`;
 }
 
 function setLivePanel(html) {
   state.livePanel = html;
+  state.liveSections = [];
+  state.activeSectionId = null;
   render();
+}
+
+function resetLiveNotebook(title, html, meta) {
+  state.livePanel = null;
+  state.liveSections = [{
+    id: uniqueId("section"),
+    title,
+    meta: meta || "Current output",
+    html
+  }];
+  state.activeSectionId = state.liveSections[0].id;
+  render();
+}
+
+function addLiveSection(title, html, meta) {
+  state.livePanel = null;
+  const id = uniqueId("section");
+  state.liveSections.push({ id, title, meta: meta || "Output", html });
+  state.activeSectionId = id;
+  render();
+}
+
+function renderLiveNotebook() {
+  if (state.liveSections.length) {
+    return `<div class="live-notebook">
+      ${state.liveSections.map((section, index) => {
+        const open = section.id === state.activeSectionId;
+        return `<details class="live-section" ${open ? "open" : ""}>
+          <summary>
+            <span class="section-index">${index + 1}</span>
+            <span><strong>${section.title}</strong><em>${section.meta}</em></span>
+          </summary>
+          <div class="live-section-body">${section.html}</div>
+        </details>`;
+      }).join("")}
+    </div>`;
+  }
+  return state.livePanel || livePanelFallback();
+}
+
+function uniqueId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function livePanelTitle() {
@@ -511,6 +556,8 @@ function startRiskProfile() {
   state.inputMode = null;
   state.foundryStep = 0;
   state.livePanel = null;
+  state.liveSections = [];
+  state.activeSectionId = null;
   state.discoverComfort = null;
   state.busy = true;
   state.scenarioState = { source: "—", thesis: "Pending", foundry: "Pending", challenge: "Pending", notes: "Pending", memo: "Pending", memory: "Pending" };
@@ -543,7 +590,7 @@ function enterAsk() {
   state.inputMode = "ask";
   state.busy = false;
   setQuickReplies([]);
-  setLivePanel(askWorkspaceCard());
+  resetLiveNotebook("Ask workspace", askWorkspaceCard(), "User brings the story");
 
   showTypingThen(
     `<p>What market story, article, or client concern do you want to test against <strong>${state.selectedPortfolio}</strong>? You can type it below or choose a quick start.</p>`,
@@ -566,7 +613,7 @@ function submitAsk(userText) {
   state.busy = true;
 
   addUser(text);
-  setLivePanel(thesisWorkingCard());
+  resetLiveNotebook("Ask intake", thesisWorkingCard(), "Reading user story");
 
   showTypingThen(
     `<p>I'll treat this as an oil / inflation / rates story and build it through the Scenario Foundry. First let me extract the market thesis.</p>
@@ -574,7 +621,7 @@ function submitAsk(userText) {
     2400
   ).then(() => {
     state.scenarioState.thesis = "Done";
-    setLivePanel(thesisCard());
+    addLiveSection("Extracted thesis", thesisCard(), "Risk channels mapped");
     addAI(`<p>I extracted the market thesis and mapped the risk channels in the workspace. Now I'll run it through <strong>Scenario Foundry</strong> &mdash; a structured build that converts this narrative into portfolio-specific factor shocks without jumping from story to arbitrary numbers.</p>`);
     state.busy = false;
     setQuickReplies([
@@ -594,7 +641,7 @@ function comparePortfolios() {
     `<p>I compared the same story across the portfolio universe. The workspace shows why one generic oil scenario would miss the point.</p>`,
     1800
   ).then(() => {
-    setLivePanel(crossPortfolioTable());
+    addLiveSection("Cross-portfolio comparison", crossPortfolioTable(), "Same event, different relevance");
     state.busy = false;
     setQuickReplies([{ label: "Run Scenario Foundry", action: "run-foundry", primary: true }]);
     render();
@@ -611,7 +658,7 @@ function enterWatch() {
   state.inputMode = null;
   state.busy = true;
   setQuickReplies([]);
-  setLivePanel(watchEventCards());
+  resetLiveNotebook("Watch alert center", watchEventCards(), "System brings the story");
 
   showTypingThen(
     `<p>I'm watching market themes against <strong>${state.selectedPortfolio}</strong>. I found three relevant alerts and put the alert center in the workspace.</p>
@@ -640,7 +687,7 @@ function investigateWatch(theme) {
   state.busy = true;
 
   const isMain = theme === "middle-east";
-  setLivePanel(isMain ? watchMappingWorkspace() : watchEventCards());
+  addLiveSection("Alert relevance map", isMain ? watchMappingWorkspace() : watchEventCards(), "Portfolio match");
 
   showTypingThen(
     `${loadingCard(["Reading event signals", "Matching against portfolio vulnerabilities", "Checking Discover watchlist", "Preparing Foundry entry"])}
@@ -669,7 +716,7 @@ function watchOtherPortfolios() {
     `<p>I checked the same event across the full portfolio set. The workspace shows the different transmission paths.</p>`,
     1800
   ).then(() => {
-    setLivePanel(crossPortfolioTable());
+    addLiveSection("Cross-portfolio alert comparison", crossPortfolioTable(), "Affected portfolios");
     state.busy = false;
     setQuickReplies([{ label: "Build scenario for Global Multi-Asset Income", action: "watch-build", primary: true }]);
     render();
@@ -686,7 +733,7 @@ function enterDiscover() {
   state.inputMode = null;
   state.busy = true;
   setQuickReplies([]);
-  setLivePanel(discoverThemeDashboard());
+  resetLiveNotebook("Discover driver map", discoverThemeDashboard(), "Portfolio reveals the story");
 
   showTypingThen(
     `<p>I'll start portfolio-first. No market event yet &mdash; just the portfolio telling us which themes and drivers matter most.</p>
@@ -714,7 +761,7 @@ function setDiscoverComfort(level) {
   state.discoverComfort = level;
   addUser(`Use ${level} as the reverse-stress comfort level.`);
   state.busy = true;
-  setLivePanel(discoverCalibrationWorkspace(level));
+  addLiveSection("Reverse-stress calibration", discoverCalibrationWorkspace(level), `Comfort level ${level}`);
 
   showTypingThen(
     `<p>Got it. I used <strong>${level}</strong> as the PnL calibration target and identified the factor themes most likely to matter.</p>
@@ -753,7 +800,7 @@ function investigateDiscover(label) {
     2400
   ).then(() => {
     state.busy = false;
-    setLivePanel(discoverCalibrationWorkspace(state.discoverComfort || "-4%"));
+    addLiveSection("Driver investigation notes", discoverCalibrationWorkspace(state.discoverComfort || "-4%"), "Saved for calibration");
     addAI(`<p>I saved the driver map. We can monitor it, or use it as calibration input when building a scenario.</p>`);
     setQuickReplies([
       { label: "Build scenario from this vulnerability", action: "discover-build", primary: true },
@@ -775,7 +822,7 @@ function runFoundry(sourceLabel) {
   state.busy = true;
   state.foundryStep = 0;
   setQuickReplies([]);
-  setLivePanel(foundryWorkspaceIntro(sourceLabel));
+  resetLiveNotebook("Scenario Foundry input", foundryWorkspaceIntro(sourceLabel), "Build source");
 
   addAI(`<p>Running the <strong>Scenario Foundry</strong>${sourceLabel ? ` from <em>${sourceLabel}</em>` : ""}. I'll work through the build and pause at key checkpoints for your feedback.</p>`);
   render();
@@ -801,20 +848,9 @@ function foundryStep1() {
      ${loadingCard(["Checking recent market signals", "Tracking relevant factor moves", "Summarising current state"])}`,
     2000
   ).then(() => showTypingThen(
-    `<div class="ai-card">
-       <h3 style="margin-bottom:10px">Current market state</h3>
-       ${tbl(["Market factor","Recent move","Interpretation"],[
-         ["Brent crude",       "+8%",    "Supply-risk premium entering crude markets"],
-         ["5Y breakevens",     "+20bp",  "Inflation expectations repricing higher"],
-         ["US 10Y yield",      "+15bp",  "Rates selloff on delayed-cut pricing"],
-         ["HY spreads",        "+25bp",  "Early risk-off, credit caution building"],
-         ["USD vs EM FX",      "+1.5%",  "Dollar pressure on EM"],
-         ["Equities (MSCI)",   "&minus;2%", "Risk sentiment beginning to weaken"]
-       ])}
-       <p class="insight-note">This gives the scenario a real-world anchor &mdash; oil is the catalyst but other risk factors are already moving in the same direction.</p>
-     </div>`,
-    1800
-  ));
+    `<p>Market state is anchored. I added the signal table to the workspace.</p>`,
+    1200
+  ).then(() => addLiveSection("Current market state", currentMarketStateCard(), "News Briefer")));
 }
 
 function foundryStep2() {
@@ -824,21 +860,9 @@ function foundryStep2() {
      <p>I'll map the causal chain &mdash; how this event could play out step by step and become a market scenario.</p>`,
     1500
   ).then(() => showTypingThen(
-    `<div class="ai-card">
-       <h3 style="margin-bottom:8px">Catalyst path</h3>
-       <ol class="catalyst-steps">
-         <li>Middle East escalation raises supply-disruption risk</li>
-         <li>Oil moves higher as risk premium enters crude markets</li>
-         <li>Energy shock lifts inflation expectations</li>
-         <li>Fed cut expectations are pushed out</li>
-         <li>Yields rise, hurting duration exposure</li>
-         <li>Credit spreads widen as risk appetite weakens</li>
-         <li>USD strengthens, pressuring EM FX</li>
-       </ol>
-       <p class="insight-note">This is not just "oil up" &mdash; it is an oil shock becoming an inflation, rates, credit, and FX event. That causal chain is what matters for this portfolio.</p>
-     </div>`,
-    1800
-  ));
+    `<p>Catalyst path is mapped. I added the causal chain to the workspace.</p>`,
+    1200
+  ).then(() => addLiveSection("Catalyst path", catalystPathCard(), "Causal chain")));
 }
 
 function foundryStep3() {
@@ -849,18 +873,9 @@ function foundryStep3() {
      ${loadingCard(["Searching historical episode database", "Matching on shock type and transmission", "Extracting calibration priors"])}`,
     1800
   ).then(() => showTypingThen(
-    `<div class="ai-card">
-       <h3 style="margin-bottom:10px">Historical analogues</h3>
-       ${tbl(["Analogue","Why relevant","What it contributes"],[
-         ["Russia / Ukraine 2022",   "Energy shock + inflation repricing", "Oil, breakevens, rates, credit response calibration"],
-         ["Gulf War 1990",           "Oil supply shock + geopolitical risk","Oil risk-premium behavior and duration of shock"],
-         ["Abqaiq 2019",             "Oil supply disruption",              "Short-lived shock: partial precedent for Scenario A"],
-         ["2011 Middle East / oil",  "Oil + risk sentiment",               "Inflation and risk-off channel interaction"]
-       ])}
-       <p class="insight-note">I'll use these to inform the shock menu, not copy any single episode.</p>
-     </div>`,
-    1900
-  ));
+    `<p>Historical analogues are selected. I added the calibration precedents to the workspace.</p>`,
+    1200
+  ).then(() => addLiveSection("Historical analogues", historicalAnaloguesCard(), "Calibration precedents")));
 }
 
 function foundryHistoricalFeedback() {
@@ -885,7 +900,7 @@ function continueAfterHistorical(feedback) {
 
 function foundryFactorFeedback() {
   state.busy = false;
-  setLivePanel(factorSelectionCard());
+  addLiveSection("Factor Selection", factorSelectionCard(), "Map, retrieve, choose");
   setQuickReplies([
     { label: "Factor set looks complete", action: "foundry-factor-ok", primary: true },
     { label: "Add oil volatility as a candidate", action: "foundry-factor-add" }
@@ -906,7 +921,7 @@ function continueAfterFactors(feedback) {
 
 function foundryShockFeedback() {
   state.busy = false;
-  setLivePanel(shockMenuCard());
+  addLiveSection("Scenario shock menu", shockMenuCard(), "Shock Simulator");
   setQuickReplies([
     { label: "Review diagnostics", action: "foundry-diagnostics", primary: true },
     { label: "Continue to portfolio impact", action: "foundry-impact" },
@@ -951,7 +966,7 @@ function foundryDiagnosticsStep() {
 
 function foundryDiagnosticsFeedback() {
   state.busy = false;
-  setLivePanel(foundryDiagnosticsWorkspace());
+  addLiveSection("Plausibility & Diagnostics", foundryDiagnosticsWorkspace(), "95% envelope");
   setQuickReplies([
     { label: "Continue to portfolio impact", action: "foundry-impact", primary: true },
     { label: "Adjust shocks before impact", action: "foundry-shocks-adjust" }
@@ -1042,7 +1057,7 @@ function foundryStep8() {
 
 function foundryDone() {
   setFS(8);
-  setLivePanel(impactDecompositionCard());
+  addLiveSection("Portfolio impact", impactDecompositionCard(), "Impact decomposition");
   state.scenarioState.foundry = "Done";
   state.busy = false;
   state.step = "challenge";
@@ -1088,14 +1103,13 @@ function submitChallenge(userText) {
   const text = userText || "What if oil rises 50% instead of 35%, but credit spreads widen less?";
   addUser(text);
   state.busy = true;
-  setLivePanel(challengeWorkspaceCard());
+  addLiveSection("Challenge & refined diagnostics", challengeWorkspaceCard(), "Human edit");
 
   showTypingThen(
     `<p>Updating Scenario B. A larger oil shock increases inflation pressure and rates impact, but lower credit widening reduces spread losses. The portfolio's partial energy offset means the incremental oil move is partly mitigated. Net loss is still driven mainly by duration and credit.</p>
-     ${assumptionTable()}
-     ${challengeDiagnosticsCard()}
+     <p>I added the revised assumptions and before/after diagnostics to the workspace.</p>
      <p><strong>The portfolio is more sensitive to rates and credit than to oil itself. This challenge confirms that finding.</strong></p>`,
-    2300
+    1500
   ).then(() => {
     state.scenarioState.challenge = "Done";
     state.busy = false;
@@ -1112,10 +1126,10 @@ function reviewUpdatedPlausibility() {
   setQuickReplies([]);
   addUser("Review updated plausibility.");
   state.busy = true;
-  setLivePanel(challengeWorkspaceCard());
+  addLiveSection("Updated plausibility review", challengeWorkspaceCard(), "After human edit");
   showTypingThen(
-    `${challengeDiagnosticsCard()}<p>The revised scenario stays inside the 95% plausibility envelope. The oil shock is more extreme, but lower credit contagion reduces joint scenario extremity.</p>`,
-    1600
+    `<p>The revised scenario stays inside the 95% plausibility envelope. The oil shock is more extreme, but lower credit contagion reduces joint scenario extremity. I kept the updated diagnostic card open in the workspace.</p>`,
+    1100
   ).then(() => {
     state.busy = false;
     setQuickReplies([
@@ -1155,17 +1169,10 @@ function challengeCompare() {
   state.busy = true;
 
   showTypingThen(
-    `<p>Here is the contrast between a pure oil shock (Scenario A) and the stagflation path (Scenario B):</p>
-     ${tbl(["Factor","Pure oil shock (A)","Stagflation repricing (B)","What drives the difference"],[
-       ["Brent crude",    "+20%",   "+35%", "Larger move in Scenario B"],
-       ["Rates (5Y)",     "+15bp",  "+60bp","Inflation repricing delays Fed cuts"],
-       ["CDX HY",         "+25bp",  "+90bp","Risk appetite deteriorates more"],
-       ["S&amp;P 500",    "&minus;2%", "&minus;7%","Broader equity drawdown"],
-       ["Portfolio impact","&minus;0.8%","&minus;3.7%","Rate + credit channel dominates"]
-     ])}
-     <p class="insight-note">The portfolio's energy exposure helps in Scenario A. But once rates and credit move, that offset becomes insufficient. Scenario B is the right client discussion scenario for this portfolio.</p>`,
-    2000
+    `<p>I compared the pure oil shock against the stagflation path and added the contrast to the workspace.</p>`,
+    1200
   ).then(() => {
+    addLiveSection("Scenario B vs pure oil shock", scenarioComparisonCard(), "Challenge response");
     state.busy = false;
     setQuickReplies([
       { label: "View Decision Notes",  action: "decision-notes", primary: true },
@@ -1187,9 +1194,10 @@ function decisionNotes() {
   state.busy = true;
 
   showTypingThen(
-    `<p>I'll record the full reasoning so the scenario can be reviewed, audited, and revisited.</p>${decisionNotesCard()}`,
-    1800
+    `<p>I'll record the full reasoning so the scenario can be reviewed, audited, and revisited. I added the Decision Notes to the workspace.</p>`,
+    1200
   ).then(() => {
+    addLiveSection("Decision Notes", decisionNotesCard(), "Governance trail");
     state.scenarioState.notes = "Done";
     state.busy = false;
     addAI(`<p><strong>Human checkpoint:</strong> Use the revised scenario and plausibility diagnostics in the client memo?</p>`);
@@ -1210,9 +1218,10 @@ function clientMemo() {
   state.busy = true;
 
   showTypingThen(
-    `<p>Here is a client-ready explanation.</p>${memoCard()}`,
-    1900
+    `<p>I generated the client-ready explanation and added it to the workspace.</p>`,
+    1200
   ).then(() => {
+    addLiveSection("Client memo", memoCard(), "Client-ready output");
     state.scenarioState.memo = "Done";
     state.busy = false;
     setQuickReplies([{ label: "Save to Scenario Memory", action: "memory", primary: true }]);
@@ -1233,10 +1242,10 @@ function scenarioMemory() {
 
   showTypingThen(
     `<p>I've saved the complete scenario trail so the team can revisit or refresh it later &mdash; without reconstruction.</p>
-     ${memoryCard()}
      <p class="memory-close"><strong>The second client conversation is no longer a reconstruction exercise.</strong></p>`,
-    1700
+    1200
   ).then(() => {
+    addLiveSection("Scenario Memory", memoryCard(), "Saved trail");
     state.scenarioState.memory = "Saved";
     state.busy = false;
     setQuickReplies([
@@ -1276,6 +1285,50 @@ function exposureSummaryCard() {
           <div class="bar"><span style="--w:${width}%"></span></div>
         </div>`).join("")}
     </div>
+  </div>`;
+}
+
+function currentMarketStateCard() {
+  return `<div class="workspace-card">
+    <h3>Current market state</h3>
+    ${tbl(["Market factor","Recent move","Interpretation"],[
+      ["Brent crude", "+8%", "Supply-risk premium entering crude markets"],
+      ["5Y breakevens", "+20bp", "Inflation expectations repricing higher"],
+      ["US 10Y yield", "+15bp", "Rates selloff on delayed-cut pricing"],
+      ["HY spreads", "+25bp", "Early risk-off, credit caution building"],
+      ["USD vs EM FX", "+1.5%", "Dollar pressure on EM"],
+      ["Equities (MSCI)", "&minus;2%", "Risk sentiment beginning to weaken"]
+    ])}
+    <p class="insight-note">This gives the scenario a real-world anchor: oil is the catalyst but other risk factors are already moving in the same direction.</p>
+  </div>`;
+}
+
+function catalystPathCard() {
+  return `<div class="workspace-card">
+    <h3>Catalyst path</h3>
+    <ol class="catalyst-steps">
+      <li>Middle East escalation raises supply-disruption risk</li>
+      <li>Oil moves higher as risk premium enters crude markets</li>
+      <li>Energy shock lifts inflation expectations</li>
+      <li>Fed cut expectations are pushed out</li>
+      <li>Yields rise, hurting duration exposure</li>
+      <li>Credit spreads widen as risk appetite weakens</li>
+      <li>USD strengthens, pressuring EM FX</li>
+    </ol>
+    <p class="insight-note">This is not just "oil up"; it is an oil shock becoming an inflation, rates, credit, and FX event.</p>
+  </div>`;
+}
+
+function historicalAnaloguesCard() {
+  return `<div class="workspace-card">
+    <h3>Historical analogues</h3>
+    ${tbl(["Analogue","Why relevant","What it contributes"],[
+      ["Russia / Ukraine 2022", "Energy shock + inflation repricing", "Oil, breakevens, rates, credit response calibration"],
+      ["Gulf War 1990", "Oil supply shock + geopolitical risk", "Oil risk-premium behavior and duration of shock"],
+      ["Abqaiq 2019", "Oil supply disruption", "Short-lived shock: partial precedent for Scenario A"],
+      ["2011 Middle East / oil", "Oil + risk sentiment", "Inflation and risk-off channel interaction"]
+    ])}
+    <p class="insight-note">These inform the shock menu; no single episode is copied one-for-one.</p>
   </div>`;
 }
 
@@ -1796,6 +1849,20 @@ function challengeWorkspaceCard() {
   </div>`;
 }
 
+function scenarioComparisonCard() {
+  return `<div class="workspace-card">
+    <h3>Scenario B vs pure oil shock</h3>
+    ${tbl(["Factor","Pure oil shock (A)","Stagflation repricing (B)","What drives the difference"],[
+      ["Brent crude", "+20%", "+35%", "Larger move in Scenario B"],
+      ["Rates (5Y)", "+15bp", "+60bp", "Inflation repricing delays Fed cuts"],
+      ["CDX HY", "+25bp", "+90bp", "Risk appetite deteriorates more"],
+      ["S&amp;P 500", "&minus;2%", "&minus;7%", "Broader equity drawdown"],
+      ["Portfolio impact", "&minus;0.8%", "&minus;3.7%", "Rate + credit channel dominates"]
+    ])}
+    <p class="insight-note">The portfolio's energy exposure helps in Scenario A. But once rates and credit move, that offset becomes insufficient.</p>
+  </div>`;
+}
+
 function discoverThemeDashboard() {
   return `<div class="workspace-card discover-map">
     <h3>Portfolio vulnerability map</h3>
@@ -1864,6 +1931,57 @@ function tbl(headers, rows) {
       <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>
     </table>
   </div>`;
+}
+
+// Latest definitions keep heavy Foundry outputs in the live workspace instead of the chat transcript.
+function foundryStep4() {
+  setFS(4);
+  return showTypingThen(
+    `${fBadge(4, "Factor Selection")}
+     <p>Now I'll do Factor Selection in one pass: translate the narrative into factor intents, retrieve plausible candidates, and choose a final explainable factor set.</p>`,
+    1500
+  ).then(() => showTypingThen(
+    `<p>Factor Selection is complete. I added the selected factor set, candidate list, and rejected items to the workspace.</p>`,
+    1000
+  ));
+}
+
+function foundryStep7() {
+  setFS(5);
+  return showTypingThen(
+    `${fBadge(5, "Shock Simulator")}
+     <p>I'll generate a menu of factor-shock scenarios using the catalyst path, historical analogues, selected factors, portfolio context, and any Discover calibration target.</p>
+     ${loadingCard(["Calibrating oil shock severity range", "Mapping inflation transmission", "Estimating credit widening paths", "Building scenario menu"])}`,
+    1900
+  ).then(() => showTypingThen(
+    `<p>The shock menu is ready. I added the candidate scenarios to the workspace for review.</p>`,
+    1000
+  ));
+}
+
+function foundryDiagnosticsStep() {
+  setFS(6);
+  return showTypingThen(
+    `${fBadge(6, "Plausibility & Diagnostics")}
+     <p>I'll diagnose the scenario menu before applying it to the portfolio. This checks factor-level shock extremity and joint scenario extremity.</p>
+     ${loadingCard(["Computing factor shock Z-scores", "Checking joint scenario extremity", "Comparing against 95% envelope", "Building plausibility frontier"])}`,
+    2000
+  ).then(() => showTypingThen(
+    `<p>Diagnostics are ready. I added the plausibility cards, frontier, Z-score matrix, and factor impact bars to the workspace.</p>`,
+    1000
+  ));
+}
+
+function foundryStep8() {
+  setFS(7);
+  return showTypingThen(
+    `${fBadge(7, "Portfolio Impact")}
+     <p>I'll decompose Scenario B into portfolio drivers to show where the loss is coming from.</p>`,
+    1300
+  ).then(() => showTypingThen(
+    `<p>Impact decomposition is complete. I added the contribution table to the workspace.</p>`,
+    1000
+  ));
 }
 
 // ============================================================

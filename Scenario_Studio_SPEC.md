@@ -136,6 +136,7 @@ Use a three-zone product layout on desktop:
 - Slim left context rail, roughly 10-15% width, for portfolio/session status and Foundry stepper.
 - Center conversational rail, roughly 40-50% width, for AI narration, user messages, quick replies, and typed feedback.
 - Right live workspace for tables, factor maps, diagnostics, scenario outputs, and memo/memory artifacts.
+- Outputs should accumulate as collapsible notebook sections. The newest section opens automatically; older sections collapse but remain available for review.
 
 The right workspace should be used creatively for current outputs and insights, not as a static portfolio exposure panel.
 
