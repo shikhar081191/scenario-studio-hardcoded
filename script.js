@@ -47,8 +47,106 @@ const FOUNDRY_STEPS = [
   { id: 3, name: "Historical Harvester", subtitle: "Historical Precedents", sig: false },
   { id: 4, name: "Factor Selection",   subtitle: "Map, retrieve, choose",  sig: false },
   { id: 5, name: "Shock Simulator",    subtitle: "Scenario Shocks",       sig: false },
-  { id: 6, name: "Portfolio Impact",   subtitle: "Impact Decomposition",  sig: false }
+  { id: 6, name: "Plausibility & Diagnostics", subtitle: "Shock Diagnostics", sig: false },
+  { id: 7, name: "Portfolio Impact",   subtitle: "Impact Decomposition",  sig: false }
 ];
+
+const FACTOR_UNIVERSE = [
+  "Brent crude",
+  "WTI crude",
+  "US 2Y yield",
+  "US 5Y yield",
+  "US 10Y yield",
+  "US 5Y breakeven inflation",
+  "US 10Y breakeven inflation",
+  "CDX IG",
+  "CDX HY",
+  "S&P 500",
+  "MSCI World",
+  "VIX",
+  "EM FX basket",
+  "EM local rates",
+  "USD index"
+];
+
+const SCENARIO_DIAGNOSTICS = {
+  A: {
+    name: "Scenario A — Contained Oil Shock",
+    shortName: "Scenario A",
+    impact: "-0.8%",
+    percentile: 72,
+    status: "Inside 95% envelope",
+    severity: "Moderate",
+    factors: {
+      "Brent crude": ["+20%", 1.4],
+      "WTI crude": ["+18%", 1.3],
+      "US 2Y yield": ["+10bp", 0.4],
+      "US 5Y yield": ["+15bp", 0.6],
+      "US 10Y yield": ["+12bp", 0.5],
+      "US 5Y breakeven inflation": ["+15bp", 0.7],
+      "US 10Y breakeven inflation": ["+10bp", 0.5],
+      "CDX IG": ["+8bp", 0.4],
+      "CDX HY": ["+25bp", 0.6],
+      "S&P 500": ["-2%", -0.5],
+      "MSCI World": ["-1.8%", -0.5],
+      "VIX": ["+3 pts", 0.7],
+      "EM FX basket": ["-1%", -0.4],
+      "EM local rates": ["+15bp", 0.5],
+      "USD index": ["+0.8%", 0.4]
+    }
+  },
+  B: {
+    name: "Scenario B — Stagflation Repricing",
+    shortName: "Scenario B",
+    impact: "-3.7%",
+    percentile: 94,
+    status: "Inside 95% envelope",
+    severity: "Severe but plausible",
+    recommended: true,
+    factors: {
+      "Brent crude": ["+35%", 2.2],
+      "WTI crude": ["+32%", 2.0],
+      "US 2Y yield": ["+70bp", 1.9],
+      "US 5Y yield": ["+60bp", 1.8],
+      "US 10Y yield": ["+45bp", 1.5],
+      "US 5Y breakeven inflation": ["+35bp", 1.6],
+      "US 10Y breakeven inflation": ["+25bp", 1.2],
+      "CDX IG": ["+25bp", 1.4],
+      "CDX HY": ["+90bp", 1.9],
+      "S&P 500": ["-7%", -1.5],
+      "MSCI World": ["-6%", -1.4],
+      "VIX": ["+10 pts", 1.8],
+      "EM FX basket": ["-3%", -1.2],
+      "EM local rates": ["+45bp", 1.4],
+      "USD index": ["+2.0%", 1.0]
+    }
+  },
+  C: {
+    name: "Scenario C — Credit Risk-Off",
+    shortName: "Scenario C",
+    impact: "-4.5%",
+    percentile: 98,
+    status: "Outside 95% envelope",
+    severity: "Extreme / outside 95% envelope",
+    factors: {
+      "Brent crude": ["+20%", 1.4],
+      "WTI crude": ["+18%", 1.3],
+      "US 2Y yield": ["-20bp", -0.7],
+      "US 5Y yield": ["-10bp", -0.3],
+      "US 10Y yield": ["-5bp", -0.2],
+      "US 5Y breakeven inflation": ["-10bp", -0.5],
+      "US 10Y breakeven inflation": ["-8bp", -0.4],
+      "CDX IG": ["+45bp", 2.4],
+      "CDX HY": ["+140bp", 2.8],
+      "S&P 500": ["-10%", -2.1],
+      "MSCI World": ["-9%", -2.0],
+      "VIX": ["+18 pts", 3.0],
+      "EM FX basket": ["-5%", -2.0],
+      "EM local rates": ["+70bp", 2.1],
+      "USD index": ["+3.0%", 1.6]
+    }
+  }
+};
 
 // ============================================================
 // STATE
@@ -558,9 +656,9 @@ function enterDiscover() {
     2800
   ).then(() =>
     showTypingThen(
-      `<p>Here are the top vulnerabilities I would monitor for this portfolio.</p>
-       ${vulnerabilityTable()}
-       <p><strong>The portfolio is not most vulnerable to oil alone. It is most vulnerable to oil becoming a rates-and-credit event.</strong></p>
+      `<p>Here is the plausibility-constrained reverse stress I would run for this portfolio.</p>
+       ${discoverPlausibilityReverseStress()}
+       <p><strong>Credit Risk-Off creates the larger loss, but it sits outside the 95% plausibility envelope. Within the 95% envelope, Stagflation Repricing is the most damaging plausible scenario.</strong></p>
        <p>Which vulnerability should we investigate?</p>`,
       2200
     )
@@ -749,21 +847,55 @@ function continueAfterFactors(feedback) {
 function foundryShockFeedback() {
   state.busy = false;
   setQuickReplies([
-    { label: "Use these shocks", action: "foundry-shocks-ok", primary: true },
+    { label: "Review diagnostics", action: "foundry-diagnostics", primary: true },
+    { label: "Continue to portfolio impact", action: "foundry-impact" },
     { label: "Make credit widening less severe", action: "foundry-shocks-adjust" }
   ]);
-  addAI(`<p><strong>Human checkpoint:</strong> Do you want to adjust any shocks before I calculate portfolio impact?</p>`);
+  addAI(`<p><strong>Human checkpoint:</strong> I've generated the shock menu. Before applying it to the portfolio, do you want to review scenario plausibility and factor-level diagnostics?</p>`);
   render();
 }
 
-function continueAfterShocks(feedback) {
+function continueAfterShocks(feedback, reviewDiagnostics) {
   setQuickReplies([]);
   state.busy = true;
   if (feedback) addUser(feedback);
-  sequence([
-    foundryStep8,
-    foundryDone
+  const steps = reviewDiagnostics
+    ? [foundryDiagnosticsStep, foundryDiagnosticsFeedback]
+    : [foundryStep8, foundryDone];
+  sequence(steps);
+}
+
+function foundryDiagnosticsStep() {
+  setFS(6);
+  return showTypingThen(
+    `${fBadge(6, "Plausibility & Diagnostics")}
+     <p>I'll diagnose the scenario menu before applying it to the portfolio. This checks factor-level shock extremity and joint scenario extremity.</p>
+     ${loadingCard(["Computing factor shock Z-scores", "Checking joint scenario extremity", "Comparing against 95% envelope", "Building plausibility frontier"])}`,
+    2200
+  ).then(() => showTypingThen(
+    `<div class="ai-card diagnostics-card">
+       <h3 style="margin-bottom:10px">Plausibility & Diagnostics</h3>
+       ${plausibilityNote()}
+       ${plausibilityCards()}
+       ${frontierPlot()}
+       <h4 style="margin:16px 0 8px">Factor shock Z-score heatmap</h4>
+       ${zScoreHeatmap()}
+       <h4 style="margin:16px 0 8px">Selected Scenario B — key market factor impacts</h4>
+       ${factorImpactBars("B")}
+       <p class="insight-note">Scenario B is highlighted because it is the largest portfolio loss that remains inside the 95% plausibility envelope. Scenario C has a larger loss, but breaches the envelope.</p>
+     </div>`,
+    2600
+  ));
+}
+
+function foundryDiagnosticsFeedback() {
+  state.busy = false;
+  setQuickReplies([
+    { label: "Continue to portfolio impact", action: "foundry-impact", primary: true },
+    { label: "Adjust shocks before impact", action: "foundry-shocks-adjust" }
   ]);
+  addAI(`<p><strong>Human checkpoint:</strong> Diagnostics are complete. Should I use this plausibility-constrained scenario menu for portfolio impact?</p>`);
+  render();
 }
 
 function foundryStep4() {
@@ -823,9 +955,9 @@ function foundryStep7() {
 }
 
 function foundryStep8() {
-  setFS(6);
+  setFS(7);
   return showTypingThen(
-    `${fBadge(6, "Portfolio Impact")}
+    `${fBadge(7, "Portfolio Impact")}
      <p>I'll decompose Scenario B into portfolio drivers to show where the loss is coming from.</p>`,
     1500
   ).then(() => showTypingThen(
@@ -847,7 +979,7 @@ function foundryStep8() {
 }
 
 function foundryDone() {
-  setFS(7);
+  setFS(8);
   state.scenarioState.foundry = "Done";
   state.busy = false;
   state.step = "challenge";
@@ -897,13 +1029,32 @@ function submitChallenge(userText) {
   showTypingThen(
     `<p>Updating Scenario B. A larger oil shock increases inflation pressure and rates impact, but lower credit widening reduces spread losses. The portfolio's partial energy offset means the incremental oil move is partly mitigated. Net loss is still driven mainly by duration and credit.</p>
      ${assumptionTable()}
+     ${challengeDiagnosticsCard()}
      <p><strong>The portfolio is more sensitive to rates and credit than to oil itself. This challenge confirms that finding.</strong></p>`,
     2300
   ).then(() => {
     state.scenarioState.challenge = "Done";
     state.busy = false;
     setQuickReplies([
-      { label: "View Decision Notes",  action: "decision-notes", primary: true },
+      { label: "Review updated plausibility", action: "review-updated-plausibility", primary: true },
+      { label: "View Decision Notes",  action: "decision-notes" },
+      { label: "Generate client memo", action: "client-memo" }
+    ]);
+    render();
+  });
+}
+
+function reviewUpdatedPlausibility() {
+  setQuickReplies([]);
+  addUser("Review updated plausibility.");
+  state.busy = true;
+  showTypingThen(
+    `${challengeDiagnosticsCard()}<p>The revised scenario stays inside the 95% plausibility envelope. The oil shock is more extreme, but lower credit contagion reduces joint scenario extremity.</p>`,
+    1600
+  ).then(() => {
+    state.busy = false;
+    setQuickReplies([
+      { label: "View Decision Notes", action: "decision-notes", primary: true },
       { label: "Generate client memo", action: "client-memo" }
     ]);
     render();
@@ -976,7 +1127,8 @@ function decisionNotes() {
   ).then(() => {
     state.scenarioState.notes = "Done";
     state.busy = false;
-    setQuickReplies([{ label: "Generate client memo", action: "client-memo", primary: true }]);
+    addAI(`<p><strong>Human checkpoint:</strong> Use the revised scenario and plausibility diagnostics in the client memo?</p>`);
+    setQuickReplies([{ label: "Use revised scenario and diagnostics in memo", action: "client-memo", primary: true }]);
     render();
   });
 }
@@ -1141,6 +1293,135 @@ function vulnerabilityTable() {
   </div>`;
 }
 
+function discoverPlausibilityReverseStress() {
+  return `<div class="ai-card diagnostics-card">
+    <h3 style="margin-bottom:8px">Plausibility-constrained reverse stress</h3>
+    ${plausibilityNote()}
+    <div class="constraint-grid">
+      <div class="metric-tile"><span>Constraint</span><strong>95% plausibility envelope</strong></div>
+      <div class="metric-tile"><span>Objective</span><strong>Maximize portfolio loss inside envelope</strong></div>
+    </div>
+    <div class="plausibility-grid">
+      ${plausibilityMiniCard("Rates bear steepening", "-3.2%", 88, "Inside 95% envelope", "Inside", false)}
+      ${plausibilityMiniCard("Oil + rates + credit stagflation", "-3.7%", 94, "Inside 95% envelope", "Recommended", true)}
+      ${plausibilityMiniCard("Credit risk-off cascade", "-4.5%", 98, "Outside 95% envelope", "Outside", false)}
+      ${plausibilityMiniCard("Pure oil shock", "-0.8%", 72, "Inside 95% envelope", "Inside", false)}
+    </div>
+    ${frontierPlot()}
+  </div>`;
+}
+
+function plausibilityMiniCard(name, impact, percentile, status, badge, recommended) {
+  const outside = percentile > 95;
+  return `<div class="plausibility-card ${recommended ? "recommended" : ""} ${outside ? "outside" : ""}">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+      <h4>${name}</h4>
+      <span class="badge ${outside ? "red" : recommended ? "purple" : "green"}">${badge}</span>
+    </div>
+    <div class="plausibility-kpis">
+      <span>Impact <strong class="impact">${impact}</strong></span>
+      <span>${percentile}th percentile</span>
+    </div>
+    <div class="meter"><span style="--w:${percentile}%"></span><i style="left:95%"></i></div>
+    <small class="${outside ? "impact" : "positive"}">${status}</small>
+  </div>`;
+}
+
+function plausibilityNote() {
+  return `<p class="diagnostic-note">Plausibility is an illustrative statistical diagnostic based on factor shock Z-scores and joint scenario extremity. It is not a forecast probability.</p>
+  <p class="muted" style="font-size:12px">Individual factor Z-score = shock / historical scenario-horizon volatility. Scenario-level plausibility is based on joint factor shock extremity, conceptually similar to a Mahalanobis-style distance.</p>`;
+}
+
+function plausibilityCards() {
+  return `<div class="plausibility-grid">
+    ${["A","B","C"].map(k => {
+      const s = SCENARIO_DIAGNOSTICS[k];
+      return plausibilityMiniCard(s.name, s.impact, s.percentile, s.status, s.recommended ? "Recommended" : s.percentile > 95 ? "Outside" : "Inside", s.recommended);
+    }).join("")}
+  </div>`;
+}
+
+function zScoreHeatmap() {
+  return `<div class="z-heatmap">
+    <div class="zh-head">Market factor</div>
+    <div class="zh-head">Scenario A</div>
+    <div class="zh-head">Scenario B</div>
+    <div class="zh-head">Scenario C</div>
+    ${FACTOR_UNIVERSE.map(factor => `
+      <div class="zh-factor">${factor}</div>
+      ${["A","B","C"].map(k => {
+        const [shock, z] = SCENARIO_DIAGNOSTICS[k].factors[factor];
+        return `<div class="zh-cell ${zClass(z)}"><strong>${shock}</strong><span>z ${z > 0 ? "+" : ""}${z.toFixed(1)}</span></div>`;
+      }).join("")}
+    `).join("")}
+  </div>`;
+}
+
+function factorImpactBars(key) {
+  const scenario = SCENARIO_DIAGNOSTICS[key];
+  return `<div class="factor-bars">
+    ${FACTOR_UNIVERSE.map(factor => {
+      const [shock, z] = scenario.factors[factor];
+      const mag = Math.min(100, Math.abs(z) / 3 * 100);
+      return `<div class="factor-bar-row">
+        <span>${factor}</span>
+        <strong>${shock}</strong>
+        <div class="diag-bar"><span class="${z < 0 ? "negative" : ""}" style="--w:${mag}%"></span></div>
+        <em>z ${z > 0 ? "+" : ""}${z.toFixed(1)}</em>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+function frontierPlot() {
+  const points = [
+    { key: "A", x: 72, y: 18, label: "A", note: "Contained" },
+    { key: "B", x: 94, y: 74, label: "B", note: "Largest inside 95%" },
+    { key: "C", x: 98, y: 92, label: "C", note: "Outside envelope" }
+  ];
+  return `<div class="frontier-card">
+    <div class="frontier-title">
+      <strong>Plausibility vs portfolio impact frontier</strong>
+      <span>95% envelope</span>
+    </div>
+    <div class="frontier-plot">
+      <div class="envelope-line" style="left:95%"></div>
+      ${points.map(p => `<div class="frontier-point ${p.key === "B" ? "best" : p.key === "C" ? "outside" : ""}" style="left:${p.x}%;bottom:${p.y}%"><span>${p.label}</span><em>${p.note}</em></div>`).join("")}
+      <div class="axis x">Scenario extremity / plausibility percentile →</div>
+      <div class="axis y">Portfolio loss ↑</div>
+    </div>
+  </div>`;
+}
+
+function challengeDiagnosticsCard() {
+  return `<div class="ai-card diagnostics-card">
+    <h3 style="margin-bottom:10px">Before / after diagnostics</h3>
+    <div class="plausibility-grid">
+      <div class="plausibility-card recommended">
+        <h4>Original Scenario B</h4>
+        <div class="plausibility-kpis"><span>Impact <strong class="impact">-3.7%</strong></span><span>94th percentile</span></div>
+        <div class="meter"><span style="--w:94%"></span><i style="left:95%"></i></div>
+        <small>Max factor Z: Brent +2.2, CDX HY +1.9</small>
+      </div>
+      <div class="plausibility-card">
+        <h4>Revised Scenario B</h4>
+        <div class="plausibility-kpis"><span>Impact <strong class="impact">-3.2%</strong></span><span>91st percentile</span></div>
+        <div class="meter"><span style="--w:91%"></span><i style="left:95%"></i></div>
+        <small>Max factor Z: Brent +2.8, CDX HY +1.1</small>
+      </div>
+    </div>
+    <p class="insight-note">Reducing credit spread widening lowers both portfolio loss and joint scenario extremity, even though the oil shock is larger. The revised scenario remains severe but becomes more internally plausible because broad credit contagion is reduced.</p>
+  </div>`;
+}
+
+function zClass(z) {
+  const a = Math.abs(z);
+  if (a >= 3) return "z-extreme";
+  if (a >= 2) return "z-high";
+  if (a >= 1) return "z-medium";
+  return "z-low";
+}
+
 function assumptionTable() {
   return `<div class="ai-card">
     <h3 style="margin-bottom:10px">Updated assumptions &mdash; Scenario B revised</h3>
@@ -1170,6 +1451,17 @@ function decisionNotesCard() {
     <div class="dn-section">
       <h4>Why this scenario matters</h4>
       <p>The event matched the portfolio's top vulnerability: oil shock spilling into rates and credit. The portfolio is long duration and high credit beta, making a stagflation path more damaging than a pure commodity shock.</p>
+    </div>
+    <div class="dn-section">
+      <h4>Diagnostic summary</h4>
+      <p>Scenario B was selected because it is the largest portfolio-relevant loss inside the 95% plausibility envelope. Scenario C creates a larger loss, but it breaches the illustrative plausibility threshold at the 98th percentile.</p>
+      <ul>
+        <li>Factor Z-scores were reviewed across the 15-factor market universe.</li>
+        <li>Original Scenario B plausibility: 94th percentile, with max factor Z-scores from Brent crude (+2.2) and CDX HY (+1.9).</li>
+        <li>Human edit reduced the plausibility percentile from 94 to 91.</li>
+        <li>Final scenario remains severe but plausible.</li>
+        <li>Diagnostics are illustrative and not a forecast probability.</li>
+      </ul>
     </div>
     <div class="dn-section">
       <h4>Why these factors were selected</h4>
@@ -1218,6 +1510,10 @@ function memoCard() {
     <div class="dn-section">
       <h4>Estimated impact</h4>
       <p><span class="impact" style="font-size:17px;font-weight:900">&minus;3.2% under revised stagflation scenario</span></p>
+    </div>
+    <div class="dn-section">
+      <h4>Plausibility diagnostic</h4>
+      <p>The revised scenario remains severe but plausible: 91st percentile inside the illustrative 95% plausibility envelope. This is a diagnostic based on factor shock Z-scores and joint scenario extremity, not a forecast probability.</p>
     </div>
     <div class="dn-section">
       <h4>Top contributors</h4>
@@ -1290,13 +1586,15 @@ function handleReply(action) {
     "foundry-historical-add": () => continueAfterHistorical("Add the 1970s oil shock as context."),
     "foundry-factor-ok": () => continueAfterFactors("Factor set looks complete."),
     "foundry-factor-add": () => continueAfterFactors("Add oil volatility as a candidate factor."),
-    "foundry-shocks-ok": () => continueAfterShocks("Use these shocks."),
-    "foundry-shocks-adjust": () => continueAfterShocks("Make credit widening less severe before impact calculation."),
+    "foundry-diagnostics": () => continueAfterShocks("Review diagnostics.", true),
+    "foundry-impact": () => continueAfterShocks("Continue to portfolio impact.", false),
+    "foundry-shocks-adjust": () => continueAfterShocks("Make credit widening less severe before impact calculation.", true),
     "challenge":      challengeScenario,
     "challenge-oil":  () => submitChallenge(null),
     "challenge-severe": () => submitChallenge("Make Scenario B more severe but still plausible."),
     "challenge-rates":  challengeRates,
     "challenge-compare": challengeCompare,
+    "review-updated-plausibility": reviewUpdatedPlausibility,
     "decision-notes": decisionNotes,
     "client-memo":    clientMemo,
     "memory":         scenarioMemory,

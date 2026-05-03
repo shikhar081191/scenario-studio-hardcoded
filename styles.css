@@ -936,6 +936,311 @@ tr:last-child td { border-bottom: 0; }
   margin-top: 4px;
 }
 
+/* ── PLAUSIBILITY & DIAGNOSTICS ── */
+.diagnostics-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.diagnostic-note {
+  padding: 10px 12px;
+  border: 1px solid #bdd2ff;
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: #eef4ff;
+  color: #1f4fb5;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.constraint-grid,
+.plausibility-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.constraint-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric-tile,
+.plausibility-card {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(24,39,75,0.05);
+}
+
+.metric-tile span,
+.plausibility-kpis span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-tile strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.plausibility-card.recommended {
+  border-color: #d2c5ff;
+  box-shadow: 0 0 0 3px rgba(103,70,195,0.10), 0 8px 24px rgba(24,39,75,0.08);
+}
+
+.plausibility-card.outside {
+  border-color: #ffc4c2;
+  background: #fff8f8;
+}
+
+.plausibility-card h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.plausibility-kpis {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.meter {
+  position: relative;
+  height: 10px;
+  margin: 8px 0;
+  overflow: visible;
+  border-radius: 999px;
+  background: #e7edf5;
+}
+
+.meter span {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green), var(--yellow), var(--orange));
+}
+
+.meter i {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 18px;
+  background: var(--red);
+}
+
+.z-heatmap {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) repeat(3, minmax(130px, 0.7fr));
+  gap: 5px;
+  min-width: 720px;
+}
+
+.zh-head,
+.zh-factor,
+.zh-cell {
+  padding: 8px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.zh-head {
+  color: #475467;
+  background: #f8fafc;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.zh-factor {
+  background: #fff;
+  border: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.zh-cell {
+  display: grid;
+  gap: 2px;
+  border: 1px solid transparent;
+}
+
+.zh-cell strong {
+  font-size: 12px;
+}
+
+.zh-cell span {
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.z-low {
+  color: #176b47;
+  background: #effbf5;
+  border-color: #ace4cd;
+}
+
+.z-medium {
+  color: #80530f;
+  background: #fff8e8;
+  border-color: #f3d892;
+}
+
+.z-high {
+  color: #964d0f;
+  background: #fff4ea;
+  border-color: #f5c99f;
+}
+
+.z-extreme {
+  color: #a73532;
+  background: #fff0ef;
+  border-color: #ffc4c2;
+}
+
+.factor-bars {
+  display: grid;
+  gap: 7px;
+}
+
+.factor-bar-row {
+  display: grid;
+  grid-template-columns: 170px 70px minmax(120px, 1fr) 58px;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.diag-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: #e7edf5;
+  overflow: hidden;
+}
+
+.diag-bar span {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--blue));
+}
+
+.diag-bar span.negative {
+  background: linear-gradient(90deg, var(--purple), var(--red));
+}
+
+.factor-bar-row em {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.frontier-card {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.frontier-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.frontier-title span {
+  color: var(--red);
+  font-weight: 900;
+}
+
+.frontier-plot {
+  position: relative;
+  height: 250px;
+  border-left: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(37,95,213,0.06) 0 95%, rgba(193,63,58,0.09) 95% 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(203,213,225,0.55) 50px),
+    repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(203,213,225,0.45) 80px);
+  overflow: hidden;
+}
+
+.envelope-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--red);
+  opacity: 0.85;
+}
+
+.frontier-point {
+  position: absolute;
+  transform: translate(-50%, 50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--blue);
+  font-weight: 900;
+  box-shadow: 0 8px 20px rgba(24,39,75,0.18);
+}
+
+.frontier-point.best {
+  background: var(--purple);
+  box-shadow: 0 0 0 5px rgba(103,70,195,0.16), 0 8px 20px rgba(24,39,75,0.18);
+}
+
+.frontier-point.outside {
+  background: var(--red);
+}
+
+.frontier-point em {
+  position: absolute;
+  left: 42px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 105px;
+  color: var(--text);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.axis {
+  position: absolute;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.axis.x {
+  right: 8px;
+  bottom: 6px;
+}
+
+.axis.y {
+  left: 8px;
+  top: 8px;
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
   .workspace { grid-template-columns: minmax(0,1fr) 290px; }
@@ -950,6 +1255,11 @@ tr:last-child td { border-bottom: 0; }
   .context-panel {
     position: static;
     max-height: none;
+  }
+
+  .plausibility-grid,
+  .constraint-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -968,5 +1278,6 @@ tr:last-child td { border-bottom: 0; }
 
   .chat-input { grid-template-columns: 1fr; }
   .assumption-row { grid-template-columns: 1fr 1fr; }
+  .factor-bar-row { grid-template-columns: 1fr; }
   .memory-grid { grid-template-columns: 1fr; }
 }

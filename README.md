@@ -23,9 +23,10 @@ Push the repository to GitHub and enable Pages from **Settings -> Pages** using 
 5. Run Scenario Foundry.
 6. Review historical precedent feedback.
 7. Review Factor Selection feedback.
-8. Review shock feedback.
-9. Challenge assumptions.
-10. Generate Decision Notes, Client Memo, and Scenario Memory.
+8. Review shock feedback and open **Plausibility & Diagnostics**.
+9. Continue to portfolio impact.
+10. Challenge assumptions and review updated plausibility.
+11. Generate Decision Notes, Client Memo, and Scenario Memory.
 
 ## Optional Paths
 
@@ -37,6 +38,8 @@ Push the repository to GitHub and enable Pages from **Settings -> Pages** using 
 - Quantified portfolio exposures with high / medium / low labels.
 - Factor Selection as a single step: map narrative themes, retrieve candidates, and select the final factor set.
 - Human feedback checkpoints after historical analogues, factor selection, and shock selection.
+- Plausibility & Diagnostics: scenario plausibility cards, factor shock Z-score heatmap, 15-factor impact bars, and a plausibility-vs-impact frontier.
+- Plausibility-constrained reverse stress in Discover mode using a 95% plausibility envelope.
 - Shock simulation and portfolio impact decomposition.
 - Dynamic context panel that shows current outputs and insights instead of repeating static exposure summaries.
 - Decision Notes, Client Memo, and Scenario Memory.

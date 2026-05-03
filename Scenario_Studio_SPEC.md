@@ -34,7 +34,7 @@ Core promise:
 4. Scenario Studio asks what the user wants to do next: Ask, Watch, or Discover.
 5. Ask, Watch, and Discover all remain conversational, but have different starting points and intermediate outputs.
 6. Scenario Studio runs Scenario Foundry.
-7. Human feedback checkpoints appear after historical precedent selection, Factor Selection, and shock selection.
+7. Human feedback checkpoints appear after historical precedent selection, Factor Selection, shock selection, diagnostics review, and before memo generation.
 8. User can challenge assumptions.
 9. Scenario Studio generates Decision Notes, Client Memo, and Scenario Memory.
 
@@ -116,7 +116,8 @@ Scenario Foundry should be a visible, conversational build process with these st
 3. Historical Harvester
 4. Factor Selection
 5. Shock Simulator
-6. Portfolio Impact
+6. Plausibility & Diagnostics
+7. Portfolio Impact
 
 Factor Selection is one step. Do not split it into Factor Finder, Factor Fetcher, and Factor Selector.
 
@@ -141,10 +142,40 @@ The conversation should ask for human input during the build:
    - Provide quick replies such as "Factor set looks complete" and "Add oil volatility as a candidate".
 
 3. After shock selection:
-   - Ask whether the user wants to adjust any shocks.
-   - Provide quick replies such as "Use these shocks" and "Make credit widening less severe".
+   - Ask whether the user wants to review plausibility before portfolio impact.
+   - Provide quick replies such as "Review diagnostics", "Continue to portfolio impact", and "Make credit widening less severe".
 
 Challenge & Refine still appears later as a deeper scenario-editing step.
+
+## Plausibility & Diagnostics
+
+Scenario Studio should not call this true scenario probability. Use these terms:
+
+- Scenario plausibility score
+- Scenario extremity percentile
+- Factor shock Z-score
+- 95% plausibility envelope
+- Plausibility-constrained reverse stress
+
+Visible explanatory note:
+
+> Plausibility is an illustrative statistical diagnostic based on factor shock Z-scores and joint scenario extremity. It is not a forecast probability.
+
+Conceptual framing:
+
+- Individual factor Z-score = shock / historical scenario-horizon volatility.
+- Scenario-level plausibility is based on joint factor shock extremity, conceptually similar to a Mahalanobis-style distance.
+- A 95th percentile scenario is severe but still inside the selected plausibility envelope.
+- Discover mode can search for the largest portfolio loss subject to the scenario remaining inside the 95% plausibility envelope.
+
+Diagnostics should include:
+
+- Scenario plausibility cards.
+- Factor shock Z-score heatmap.
+- Key market factor impact bars for Scenario B.
+- Plausibility vs portfolio impact frontier with the 95% envelope.
+
+Scenario B should be shown as the largest loss inside the 95% envelope. Scenario C should be shown as a larger loss that breaches the envelope.
 
 ## Right Context Panel
 
@@ -195,7 +226,13 @@ Revised challenge:
 - User can choose Ask, Watch, or Discover after risk profile.
 - All modes feel conversational but materially different.
 - Scenario Foundry uses a single Factor Selection step.
-- Human feedback checkpoints appear after historical analogues, Factor Selection, and shock selection.
+- Human feedback checkpoints appear after historical analogues, Factor Selection, shock selection, diagnostics, and before memo generation.
+- Plausibility & Diagnostics appears after Shock Simulator and before Portfolio Impact.
+- Discover includes plausibility-constrained reverse stress.
+- Scenario B is highlighted as the largest loss inside the 95% plausibility envelope.
+- Scenario C is shown as a larger loss outside the envelope.
+- Factor shock Z-score heatmap, 15-factor impact bars, and plausibility frontier are visible.
+- Challenge & Refine updates both portfolio impact and plausibility diagnostics.
 - Right panel changes based on current state instead of repeating exposures.
 - Demo includes cross-portfolio comparison, scenario candidates, challenge, Decision Notes, Client Memo, and Scenario Memory.
 - Works offline and on GitHub Pages.
