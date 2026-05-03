@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scenario Studio - Portfolio-aware scenario intelligence</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="brand" id="brandButton" aria-label="Restart Scenario Studio">
+        <span class="brand-mark">SS</span>
+        <span>
+          <strong>Scenario Studio</strong>
+          <small>Portfolio-aware scenario intelligence</small>
+        </span>
+      </button>
+      <div class="topbar-status">
+        <div>
+          <small>Portfolio</small>
+          <strong id="portfolioLabel">Not selected</strong>
+        </div>
+        <div>
+          <small>Mode</small>
+          <strong id="modeLabel">Setup</strong>
+        </div>
+      </div>
+    </header>
+
+    <nav class="progress" aria-label="Demo progress">
+      <span data-step="portfolio">Portfolio</span>
+      <span data-step="risk">Risk Profile</span>
+      <span data-step="mode">Choose Mode</span>
+      <span data-step="analyze">Foundry</span>
+      <span data-step="challenge">Challenge</span>
+      <span data-step="explain">Outputs</span>
+      <span data-step="memory">Memory</span>
+    </nav>
+
+    <main id="root"></main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
