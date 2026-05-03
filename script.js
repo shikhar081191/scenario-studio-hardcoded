@@ -243,6 +243,10 @@ function render() {
   else                                 root.innerHTML = renderWorkspace();
 
   bindEvents();
+  if (state.view === "workspace") {
+    scrollChat();
+    if (state.liveSections.length) scrollLiveWorkspace("active");
+  }
 }
 
 // ── Landing ──────────────────────────────────────────────────
@@ -407,6 +411,7 @@ function setLivePanel(html) {
   state.liveSections = [];
   state.activeSectionId = null;
   render();
+  scrollLiveWorkspace("top");
 }
 
 function resetLiveNotebook(title, html, meta) {
@@ -419,6 +424,7 @@ function resetLiveNotebook(title, html, meta) {
   }];
   state.activeSectionId = state.liveSections[0].id;
   render();
+  scrollLiveWorkspace("top");
 }
 
 function addLiveSection(title, html, meta) {
@@ -427,6 +433,7 @@ function addLiveSection(title, html, meta) {
   state.liveSections.push({ id, title, meta: meta || "Output", html });
   state.activeSectionId = id;
   render();
+  scrollLiveWorkspace("active");
 }
 
 function renderLiveNotebook() {
@@ -2096,8 +2103,26 @@ function updateProgress() {
 function scrollChat() {
   window.setTimeout(() => {
     const el = document.getElementById("chatBody");
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, 60);
+}
+
+function scrollLiveWorkspace(target) {
+  window.setTimeout(() => {
+    const body = document.querySelector(".live-panel-body");
+    if (!body) return;
+
+    if (target === "top") {
+      body.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    const active = body.querySelector(".live-section[open]");
+    if (!active) return;
+    const nextTop = Math.max(0, active.offsetTop - body.offsetTop - 8);
+    body.scrollTo({ top: nextTop, behavior: "smooth" });
+  }, 80);
 }
 
 // ============================================================

@@ -194,13 +194,17 @@ p:last-child { margin-bottom: 0; }
   display: grid;
   grid-template-columns: minmax(130px, 0.6fr) minmax(410px, 1.9fr) minmax(440px, 2.2fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
+  height: calc(100vh - 128px);
+  min-height: 0;
 }
 
 /* ── CHAT SHELL ── */
 .chat-shell {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  height: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
@@ -226,9 +230,10 @@ p:last-child { margin-bottom: 0; }
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 520px;
-  max-height: calc(100vh - 310px);
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
+  scroll-behavior: smooth;
   padding: 16px;
   background: #f8fbff;
   flex: 1;
@@ -755,27 +760,24 @@ tr:last-child td { border-bottom: 0; }
 
 /* ── CONTEXT PANEL ── */
 .context-panel {
-  position: sticky;
-  top: 110px;
+  height: 100%;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
   box-shadow: 0 8px 22px rgba(24,39,75,0.06);
-  max-height: calc(100vh - 130px);
   overflow-y: auto;
 }
 
 .live-panel {
-  position: sticky;
-  top: 110px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  height: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
   box-shadow: 0 8px 22px rgba(24,39,75,0.06);
-  max-height: calc(100vh - 130px);
   overflow: hidden;
 }
 
@@ -797,6 +799,7 @@ tr:last-child td { border-bottom: 0; }
 .live-panel-body {
   padding: 14px;
   overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 .workspace-card {
@@ -1642,10 +1645,14 @@ tr:last-child td { border-bottom: 0; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
-  .workspace { grid-template-columns: 150px minmax(0,1fr); }
+  .workspace {
+    grid-template-columns: 150px minmax(0,1fr);
+    height: auto;
+    min-height: 0;
+  }
   .live-panel {
     grid-column: 1 / -1;
-    position: static;
+    height: auto;
     max-height: none;
   }
 }
@@ -1657,12 +1664,12 @@ tr:last-child td { border-bottom: 0; }
   .event-grid { grid-template-columns: 1fr; }
 
   .context-panel {
-    position: static;
+    height: auto;
     max-height: none;
   }
 
   .live-panel {
-    position: static;
+    height: auto;
     max-height: none;
   }
 
